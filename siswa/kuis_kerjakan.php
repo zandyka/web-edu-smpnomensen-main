@@ -1,9 +1,10 @@
 <?php
 /**
  * File: siswa/kuis_kerjakan.php
- * Deskripsi: Halaman Pengerjaan Kuis Siswa.
- *            Menampilkan soal satu per satu, indikator progres, hitung mundur (timer),
- *            opsi jawaban interaktif, feedback instan, dan penyimpanan sementara di localStorage.
+ * Deskripsi: Halaman Pengerjaan Kuis Siswa (Mode Ujian Anti-Contek).
+ *            Menampilkan soal satu per satu, palet nomor soal (1-20), indikator pilihan netral,
+ *            hitung mundur (timer), tanpa menampilkan hasil benar/salah secara instan agar tidak dicontek,
+ *            serta menyimpan progres di localStorage hingga selesai disubmit.
  */
 
 // Memroteksi halaman siswa agar wajib login
@@ -29,9 +30,9 @@ if (!$quiz) {
     exit();
 }
 
-// Ambil semua soal terkait kuis ini
+// Ambil butir soal TANPA menyertakan jawaban_benar ke frontend untuk keamanan penuh (anti-inspect devtools)
 try {
-    $stmt_soal = $pdo->prepare("SELECT * FROM tb_soal WHERE id_kuis = :id ORDER BY id_soal ASC");
+    $stmt_soal = $pdo->prepare("SELECT id_soal, id_kuis, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d FROM tb_soal WHERE id_kuis = :id ORDER BY id_soal ASC");
     $stmt_soal->execute(['id' => $id_kuis]);
     $questions = $stmt_soal->fetchAll();
 } catch (PDOException $e) {
@@ -44,35 +45,129 @@ if ($total_soal === 0) {
     exit();
 }
 
-$page_title = 'Pengerjaan Kuis';
+$page_title = 'Pengerjaan Kuis: ' . $quiz['judul_kuis'];
 $active_page = 'kuis';
 
 require_once '../includes/header.php';
 require_once '../includes/sidebar.php';
 ?>
 
+<style>
+/* Styling Tombol Pilihan Jawaban (Anti-Contek / Netral) */
+.opt-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.opt-card:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    transform: translateY(-1px);
+}
+
+/* Opsi Aktif Terpilih (Biru Elegan Netral - TIDAK membocorkan Benar/Salah) */
+.opt-card.selected {
+    border-color: #2563eb !important;
+    background-color: #eff6ff !important;
+    color: #1e40af !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+}
+
+.opt-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 800;
+    margin-right: 12px;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.opt-card.selected .opt-badge {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+/* Palet Nomor Soal (CBT Grid) */
+.palette-btn {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+
+.palette-btn.unanswered {
+    background-color: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #cbd5e1;
+}
+
+.palette-btn.answered {
+    background-color: #2563eb;
+    color: #ffffff;
+    border: 1px solid #1d4ed8;
+}
+
+.palette-btn.current {
+    box-shadow: 0 0 0 3px #fbbf24 !important;
+    font-weight: 800;
+}
+</style>
+
 <!-- Area Konten Utama Siswa -->
 <main class="siswa-main">
     <header class="siswa-header d-flex justify-content-between align-items-center">
-        <h1 class="h4 fw-bold text-dark mb-0">Mengerjakan Kuis</h1>
-        <div class="badge bg-danger-subtle text-danger fs-6 fw-bold py-2 px-3 rounded-pill border border-danger-subtle shadow-sm" id="timer-box">
-            <i class="bi bi-clock me-1"></i>Sisa Waktu: --:--
+        <div>
+            <h1 class="h4 fw-bold text-dark mb-0">Evaluasi Mandiri</h1>
+            <div class="small text-muted">Jawablah pertanyaan dengan cermat dan teliti</div>
+        </div>
+        <div class="badge bg-danger-subtle text-danger fs-6 fw-bold py-2 px-3 rounded-pill border border-danger-subtle shadow-sm d-flex align-items-center gap-1" id="timer-box">
+            <i class="bi bi-clock-history"></i>
+            <span>Sisa Waktu: --:--</span>
         </div>
     </header>
 
     <div class="siswa-content container-fluid px-3 px-md-4 py-4">
-        <div class="mx-auto" style="max-width: 800px;">
+        <div class="mx-auto" style="max-width: 920px;">
         
             <!-- Header Informasi Kuis -->
             <div class="card border-0 shadow-sm rounded-4 p-3 p-md-4 mb-3 bg-white">
-                <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                     <div>
                         <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill mb-1">
                             <?= htmlspecialchars($quiz['kategori_materi']) ?>
                         </span>
                         <h2 class="h5 fw-bold text-dark mb-0"><?= htmlspecialchars($quiz['judul_kuis']) ?></h2>
                     </div>
-                    <div class="text-end">
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="answered-counter" class="badge bg-info-subtle text-info-emphasis fs-6 fw-bold py-2 px-3 rounded-pill">
+                            0 dari <?= $total_soal ?> Terjawab
+                        </span>
                         <span id="question-progress" class="badge bg-primary-subtle text-primary fs-6 fw-bold py-2 px-3 rounded-pill">
                             Soal 1 dari <?= $total_soal ?>
                         </span>
@@ -80,43 +175,66 @@ require_once '../includes/sidebar.php';
                 </div>
             </div>
 
-            <!-- Progress Bar Visual (Bootstrap 5) -->
-            <div class="progress mb-4 rounded-pill shadow-xs" style="height: 10px;">
+            <!-- Palet Nomor Soal (Daftar Nomor Soal) -->
+            <div class="card border-0 shadow-sm rounded-4 bg-white mb-3">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold small text-secondary text-uppercase tracking-wider">
+                            <i class="bi bi-grid-3x3-gap-fill me-1 text-primary"></i>Daftar Nomor Soal
+                        </span>
+                        <span class="badge bg-light text-muted border small">
+                            <span class="badge bg-primary p-1 me-1" style="font-size: 8px;"> </span> Terisi
+                            <span class="badge bg-secondary p-1 ms-2 me-1" style="font-size: 8px;"> </span> Belum
+                        </span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2" id="palette-container">
+                        <!-- Terisi otomatis oleh JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Bar Visual -->
+            <div class="progress mb-4 rounded-pill shadow-xs" style="height: 8px;">
                 <div id="progress-bar" class="progress-bar bg-primary progress-bar-striped progress-bar-animated" role="progressbar" style="width: <?= (1 / $total_soal) * 100 ?>%;" aria-valuenow="1" aria-valuemin="0" aria-valuemax="<?= $total_soal ?>"></div>
             </div>
 
             <!-- Card Soal Aktif -->
             <div class="card border-0 shadow-sm rounded-4 bg-white mb-4">
                 <div class="card-body p-4 p-md-5">
-                    <h3 id="question-text" class="h5 fw-bold text-dark mb-4 leading-relaxed">
-                        -- memuat soal --
-                    </h3>
-
-                    <!-- Pilihan Jawaban A, B, C, D -->
-                    <div class="d-flex flex-column gap-3" id="options-container">
-                        <!-- Dinamis terisi oleh JS -->
+                    <div class="d-flex justify-content-between align-items-center text-muted small mb-3 pb-2 border-bottom">
+                        <span id="current-badge-indicator" class="fw-bold text-primary">PERTANYAAN 1</span>
+                        <span class="fst-italic"><i class="bi bi-info-circle me-1"></i>Pilih salah satu jawaban (A, B, C, atau D)</span>
                     </div>
 
-                    <!-- Feedback Instan Benar / Salah -->
-                    <div id="feedback-box" class="mt-4 p-3 rounded-3 fw-bold small align-items-center gap-2" style="display: none;">
-                        <!-- Dinamis terisi oleh JS -->
+                    <h3 id="question-text" class="h5 fw-bold text-dark mb-4 leading-relaxed">
+                        -- Memuat pertanyaan... --
+                    </h3>
+
+                    <!-- Pilihan Jawaban A, B, C, D (Tanpa Bocoran Warna Benar/Salah) -->
+                    <div class="d-flex flex-column gap-3" id="options-container">
+                        <!-- Terisi otomatis oleh JS -->
                     </div>
                 </div>
             </div>
 
-            <!-- Tombol Navigasi Bawah -->
-            <div class="d-flex justify-content-end mb-4">
-                <button id="next-btn" class="btn btn-primary btn-lg rounded-3 fw-bold px-4 py-2 shadow-sm" style="display: none;">
-                    Berikutnya &rarr;
+            <!-- Tombol Navigasi Bawah (Sebelumnya / Berikutnya / Selesai) -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <button id="prev-btn" class="btn btn-outline-secondary btn-lg rounded-3 fw-bold px-4 py-2 shadow-sm" style="display: none;">
+                    &larr; Sebelumnya
                 </button>
+                <div class="ms-auto d-flex gap-2">
+                    <button id="next-btn" class="btn btn-primary btn-lg rounded-3 fw-bold px-4 py-2 shadow-sm">
+                        Berikutnya &rarr;
+                    </button>
+                </div>
             </div>
 
         </div>
     </div>
 
-    <!-- Script Pengendali Kuis -->
+    <!-- Script Pengendali Kuis (Aman & Anti-Contek) -->
     <script>
-        // Array Soal dari PHP
+        // Array Soal dari PHP (Aman: TIDAK mengandung jawaban_benar)
         const questions = <?= json_encode($questions) ?>;
         const totalQuestions = questions.length;
         const quizId = <?= $id_kuis ?>;
@@ -134,19 +252,20 @@ require_once '../includes/sidebar.php';
         // Inisialisasi Jawaban Sementara di LocalStorage
         let answers = JSON.parse(localStorage.getItem(storageKeyAnswers)) || {};
 
-        // Inisialisasi Timer (Jika reload page, sisa waktu tetap berjalan dari yang disimpan di localStorage)
-        let timeLeft = parseInt(localStorage.getItem(storageKeyTime)) ?? (waktuKuisMin * 60);
+        // Inisialisasi Timer
+        let timeLeft = parseInt(localStorage.getItem(storageKeyTime));
         if (isNaN(timeLeft) || timeLeft <= 0) {
             timeLeft = waktuKuisMin * 60;
         }
 
-        // Tampilkan soal pertama saat dimuat
+        // Jalankan saat dokumen siap
         document.addEventListener("DOMContentLoaded", function() {
             startTimer();
+            buildPalette();
             displayQuestion();
         });
 
-        // 1. Fungsi Jalankan Timer
+        // 1. Jalankan Timer
         function startTimer() {
             updateTimerDisplay();
             timerInterval = setInterval(function() {
@@ -162,49 +281,106 @@ require_once '../includes/sidebar.php';
             }, 1000);
         }
 
-        // 2. Tampilkan Detik ke format MM:SS
+        // 2. Format Tampilan Waktu (MM:SS)
         function updateTimerDisplay() {
             const minutes = Math.floor(timeLeft / 60);
             const seconds = timeLeft % 60;
             const timerBox = document.getElementById("timer-box");
             
-            // Format padding nol
             const displayMin = minutes < 10 ? '0' + minutes : minutes;
             const displaySec = seconds < 10 ? '0' + seconds : seconds;
             
-            timerBox.innerText = `Sisa Waktu: ${displayMin}:${displaySec}`;
+            timerBox.innerHTML = `<i class="bi bi-clock-history"></i><span>Sisa Waktu: ${displayMin}:${displaySec}</span>`;
 
-            // Peringatan jika sisa waktu di bawah 1 menit (warna merah berkedip)
-            if (timeLeft < 60) {
-                timerBox.style.backgroundColor = '#fecdd3';
-                timerBox.style.color = '#be123c';
-                timerBox.style.borderColor = '#e11d48';
+            if (timeLeft < 180) { // Di bawah 3 menit
+                timerBox.className = "badge bg-danger text-white fs-6 fw-bold py-2 px-3 rounded-pill shadow-sm d-flex align-items-center gap-1";
             }
         }
 
-        // 3. Tampilkan Soal Aktif
+        // 3. Bangun Palet Nomor Soal (1 s.d. totalQuestions)
+        function buildPalette() {
+            const paletteContainer = document.getElementById("palette-container");
+            paletteContainer.innerHTML = '';
+
+            for (let i = 0; i < totalQuestions; i++) {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "palette-btn unanswered";
+                btn.id = `palette-item-${i}`;
+                btn.innerText = (i + 1);
+                btn.title = `Pindah ke Soal ${i + 1}`;
+
+                if (answers[i] !== undefined) {
+                    btn.className = "palette-btn answered";
+                }
+
+                if (i === currentIndex) {
+                    btn.classList.add("current");
+                }
+
+                btn.onclick = function() {
+                    jumpToQuestion(i);
+                };
+
+                paletteContainer.appendChild(btn);
+            }
+            updateAnsweredCount();
+        }
+
+        // 4. Perbarui Palet Soal & Penghitung Terjawab
+        function updatePalette() {
+            for (let i = 0; i < totalQuestions; i++) {
+                const btn = document.getElementById(`palette-item-${i}`);
+                if (!btn) continue;
+
+                btn.className = "palette-btn";
+                if (answers[i] !== undefined) {
+                    btn.classList.add("answered");
+                } else {
+                    btn.classList.add("unanswered");
+                }
+
+                if (i === currentIndex) {
+                    btn.classList.add("current");
+                }
+            }
+            updateAnsweredCount();
+        }
+
+        function updateAnsweredCount() {
+            const answeredCount = Object.keys(answers).length;
+            const counter = document.getElementById("answered-counter");
+            if (counter) {
+                counter.innerText = `${answeredCount} dari ${totalQuestions} Terjawab`;
+            }
+        }
+
+        // 5. Pindah Langsung ke Nomor Soal Tertentu
+        function jumpToQuestion(index) {
+            if (index >= 0 && index < totalQuestions) {
+                currentIndex = index;
+                displayQuestion();
+            }
+        }
+
+        // 6. Tampilkan Soal Aktif (Tanpa Warna Benar/Salah)
         function displayQuestion() {
             const currentQuestion = questions[currentIndex];
             
-            // Update Teks Soal & Progres
+            // Perbarui Teks & Label Progres
+            document.getElementById("current-badge-indicator").innerText = `PERTANYAAN ${currentIndex + 1} DARI ${totalQuestions}`;
             document.getElementById("question-text").innerText = `${currentIndex + 1}. ${currentQuestion.pertanyaan}`;
             document.getElementById("question-progress").innerText = `Soal ${currentIndex + 1} dari ${totalQuestions}`;
             
-            // Update Progress Bar
+            // Progress Bar
             const progressPercent = ((currentIndex + 1) / totalQuestions) * 100;
             document.getElementById("progress-bar").style.width = progressPercent + '%';
 
-            // Bersihkan Balon Pilihan lama & Feedback
+            // Bersihkan Wadah Opsi
             const optionsContainer = document.getElementById("options-container");
             optionsContainer.innerHTML = '';
-            
-            const feedbackBox = document.getElementById("feedback-box");
-            feedbackBox.style.display = 'none';
-            
-            const nextBtn = document.getElementById("next-btn");
-            nextBtn.style.display = 'none';
 
-            // Array Opsi A, B, C, D
+            // Opsi Jawaban A, B, C, D
             const opts = [
                 { key: 'A', text: currentQuestion.opsi_a },
                 { key: 'B', text: currentQuestion.opsi_b },
@@ -212,178 +388,119 @@ require_once '../includes/sidebar.php';
                 { key: 'D', text: currentQuestion.opsi_d }
             ];
 
-            // Tampilkan pilihan sebagai tombol
+            const currentAnswer = answers[currentIndex];
+
             opts.forEach(function(opt) {
-                const btn = document.createElement("button");
-                btn.className = "opt-btn";
-                btn.style.textAlign = "left";
-                btn.style.background = "#ffffff";
-                btn.style.border = "1.5px solid #cbd5e1";
-                btn.style.borderRadius = "6px";
-                btn.style.padding = "0.75rem 1.25rem";
-                btn.style.fontSize = "0.95rem";
-                btn.style.fontFamily = "inherit";
-                btn.style.fontWeight = "600";
-                btn.style.cursor = "pointer";
-                btn.style.color = "#374151";
-                btn.style.transition = "all 0.2s";
-                
-                btn.innerHTML = `<span style="color: var(--accent-blue); font-weight: 800; margin-right: 8px;">${opt.key}.</span> ${opt.text}`;
-                
-                // Tambahkan event click untuk menjawab
-                btn.onclick = function() {
-                    selectAnswer(opt.key, currentQuestion.jawaban_benar, btn);
+                const card = document.createElement("div");
+                card.className = "opt-card";
+                card.id = `opt-${opt.key}`;
+
+                if (currentAnswer === opt.key) {
+                    card.classList.add("selected");
+                }
+
+                card.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <span class="opt-badge">${opt.key}</span>
+                        <span>${opt.text}</span>
+                    </div>
+                    <div class="opt-check">
+                        ${currentAnswer === opt.key ? '<i class="bi bi-check-circle-fill text-primary fs-5"></i>' : '<i class="bi bi-circle text-muted opacity-50 fs-5"></i>'}
+                    </div>
+                `;
+
+                // Event memilih jawaban (Dapat diubah-ubah secara fleksibel oleh siswa)
+                card.onclick = function() {
+                    selectAnswer(opt.key);
                 };
 
-                optionsContainer.appendChild(btn);
+                optionsContainer.appendChild(card);
             });
 
-            // Periksa jika soal ini sebelumnya sudah dijawab (kasus reload atau navigasi kembali)
-            if (answers[currentIndex] !== undefined) {
-                restoreAnswer(answers[currentIndex], currentQuestion.jawaban_benar);
+            // Atur Navigasi Tombol
+            const prevBtn = document.getElementById("prev-btn");
+            if (currentIndex === 0) {
+                prevBtn.style.display = "none";
+            } else {
+                prevBtn.style.display = "block";
             }
+
+            const nextBtn = document.getElementById("next-btn");
+            if (currentIndex === totalQuestions - 1) {
+                nextBtn.innerText = "Selesai & Kumpulkan Kuis";
+                nextBtn.className = "btn btn-success btn-lg rounded-3 fw-bold px-4 py-2 shadow-sm";
+            } else {
+                nextBtn.innerText = "Berikutnya \u2192";
+                nextBtn.className = "btn btn-primary btn-lg rounded-3 fw-bold px-4 py-2 shadow-sm";
+            }
+
+            updatePalette();
         }
 
-        // 4. Proses Memilih Jawaban & Umpan Balik Instan
-        function selectAnswer(selectedKey, correctKey, clickedBtn) {
-            // Simpan jawaban siswa secara lokal di array state & localStorage
+        // 7. Pilih Jawaban Siswa (Netral, Tanpa Umpan Balik Benar/Salah)
+        function selectAnswer(selectedKey) {
             answers[currentIndex] = selectedKey;
             localStorage.setItem(storageKeyAnswers, JSON.stringify(answers));
 
-            // Ambil semua tombol opsi
-            const buttons = document.querySelectorAll(".opt-btn");
-            
-            // Matikan tombol-tombol agar tidak bisa diklik lagi untuk soal ini
-            buttons.forEach(function(btn) {
-                btn.disabled = true;
-                btn.style.cursor = "default";
-                
-                // Cari opsi jawaban benar untuk disorot warna hijau
-                const optLabel = btn.innerText.substring(0, 1);
-                if (optLabel === correctKey) {
-                    btn.style.borderColor = "#16a34a";
-                    btn.style.backgroundColor = "#d1fae5";
-                    btn.style.color = "#15803d";
+            // Perbarui gaya opsi terpilih
+            const options = document.querySelectorAll(".opt-card");
+            options.forEach(function(el) {
+                el.classList.remove("selected");
+                const checkIcon = el.querySelector(".opt-check");
+                if (checkIcon) {
+                    checkIcon.innerHTML = '<i class="bi bi-circle text-muted opacity-50 fs-5"></i>';
                 }
             });
 
-            const feedbackBox = document.getElementById("feedback-box");
-            feedbackBox.style.display = "flex";
-
-            // Jika Jawaban BENAR
-            if (selectedKey === correctKey) {
-                clickedBtn.style.borderColor = "#16a34a";
-                clickedBtn.style.backgroundColor = "#d1fae5";
-                clickedBtn.style.color = "#15803d";
-                
-                feedbackBox.style.backgroundColor = "#d1fae5";
-                feedbackBox.style.color = "#065f46";
-                feedbackBox.style.border = "1px solid #10b981";
-                feedbackBox.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                    Jawaban Benar! Kerja bagus.
-                `;
-            } else {
-                // Jika Jawaban SALAH
-                clickedBtn.style.borderColor = "#ef4444";
-                clickedBtn.style.backgroundColor = "#fee2e2";
-                clickedBtn.style.color = "#b91c1c";
-
-                feedbackBox.style.backgroundColor = "#fee2e2";
-                feedbackBox.style.color = "#991b1b";
-                feedbackBox.style.border = "1px solid #f87171";
-                feedbackBox.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                    Jawaban Salah. Jawaban yang benar adalah ${correctKey}.
-                `;
+            const selectedCard = document.getElementById(`opt-${selectedKey}`);
+            if (selectedCard) {
+                selectedCard.classList.add("selected");
+                const checkIcon = selectedCard.querySelector(".opt-check");
+                if (checkIcon) {
+                    checkIcon.innerHTML = '<i class="bi bi-check-circle-fill text-primary fs-5"></i>';
+                }
             }
 
-            // Tampilkan tombol "Berikutnya"
-            const nextBtn = document.getElementById("next-btn");
-            nextBtn.style.display = "block";
-            
-            // Ubah teks tombol jika sudah mencapai soal terakhir
-            if (currentIndex === totalQuestions - 1) {
-                nextBtn.innerText = "Selesai & Kumpulkan Kuis";
-                nextBtn.style.backgroundColor = "#16a34a";
-                nextBtn.style.borderColor = "#15803d";
-            } else {
-                nextBtn.innerText = "Berikutnya \u2192";
-            }
+            updatePalette();
         }
 
-        // 5. Kembalikan State Jawaban Jika Siswa memuat ulang halaman
-        function restoreAnswer(selectedKey, correctKey) {
-            const buttons = document.querySelectorAll(".opt-btn");
-            
-            buttons.forEach(function(btn) {
-                btn.disabled = true;
-                btn.style.cursor = "default";
-                const optLabel = btn.innerText.substring(0, 1);
-                
-                if (optLabel === correctKey) {
-                    btn.style.borderColor = "#16a34a";
-                    btn.style.backgroundColor = "#d1fae5";
-                    btn.style.color = "#15803d";
-                }
-                
-                if (optLabel === selectedKey && selectedKey !== correctKey) {
-                    btn.style.borderColor = "#ef4444";
-                    btn.style.backgroundColor = "#fee2e2";
-                    btn.style.color = "#b91c1c";
-                }
-            });
-
-            const feedbackBox = document.getElementById("feedback-box");
-            feedbackBox.style.display = "flex";
-
-            if (selectedKey === correctKey) {
-                feedbackBox.style.backgroundColor = "#d1fae5";
-                feedbackBox.style.color = "#065f46";
-                feedbackBox.style.border = "1px solid #10b981";
-                feedbackBox.innerHTML = "Jawaban Benar! Kerja bagus.";
-            } else {
-                feedbackBox.style.backgroundColor = "#fee2e2";
-                feedbackBox.style.color = "#991b1b";
-                feedbackBox.style.border = "1px solid #f87171";
-                feedbackBox.innerHTML = `Jawaban Salah. Jawaban yang benar adalah ${correctKey}.`;
+        // 8. Event Listener Tombol Navigasi
+        document.getElementById("prev-btn").addEventListener("click", function() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                displayQuestion();
             }
+        });
 
-            const nextBtn = document.getElementById("next-btn");
-            nextBtn.style.display = "block";
-            if (currentIndex === totalQuestions - 1) {
-                nextBtn.innerText = "Selesai & Kumpulkan Kuis";
-                nextBtn.style.backgroundColor = "#16a34a";
-                nextBtn.style.borderColor = "#15803d";
-            }
-        }
-
-        // 6. Tombol Aksi Navigasi Selanjutnya / Selesai
         document.getElementById("next-btn").addEventListener("click", function() {
             if (currentIndex === totalQuestions - 1) {
-                // Selesai Kuis
+                // Konfirmasi Sebelum Menyelesaikan
+                const answeredCount = Object.keys(answers).length;
+                if (answeredCount < totalQuestions) {
+                    const unanswered = totalQuestions - answeredCount;
+                    const confirmSubmit = confirm(`Perhatian: Masih ada ${unanswered} soal yang belum Anda jawab!\n\nApakah Anda yakin ingin mengumpulkan kuis sekarang?`);
+                    if (!confirmSubmit) {
+                        return;
+                    }
+                } else {
+                    const confirmSubmit = confirm("Apakah Anda yakin ingin menyelesaikan dan mengumpulkan kuis ini?");
+                    if (!confirmSubmit) {
+                        return;
+                    }
+                }
                 finishQuiz();
             } else {
-                // Lanjut ke soal berikutnya
                 currentIndex++;
                 displayQuestion();
             }
         });
 
-        // 7. Menyelesaikan Sesi Kuis, Submit Jawaban, & Pembersihan Cache
+        // 9. Menyelesaikan Sesi Kuis, Kirim ke kuis_proses.php
         function finishQuiz() {
-            // Hentikan interval timer
             clearInterval(timerInterval);
 
-            // Hitung waktu pengerjaan (dalam detik)
             const elapsed = (waktuKuisMin * 60) - timeLeft;
 
-            // Buat form dinamis untuk submit ke kuis_proses.php secara aman
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = 'kuis_proses.php';
@@ -397,7 +514,7 @@ require_once '../includes/sidebar.php';
             const elapsedInput = document.createElement('input');
             elapsedInput.type = 'hidden';
             elapsedInput.name = 'elapsed_time';
-            elapsedInput.value = elapsed;
+            elapsedInput.value = elapsed > 0 ? elapsed : 0;
             form.appendChild(elapsedInput);
 
             const answersInput = document.createElement('input');
@@ -408,7 +525,7 @@ require_once '../includes/sidebar.php';
 
             document.body.appendChild(form);
 
-            // Hapus cache pengerjaan kuis ini dari localStorage sebelum submit
+            // Bersihkan localStorage untuk kuis ini
             localStorage.removeItem(storageKeyAnswers);
             localStorage.removeItem(storageKeyTime);
 
