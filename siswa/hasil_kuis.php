@@ -49,7 +49,7 @@ if ($skor >= 85) {
     $border_motivation = "#3b82f6";
 } else {
     $motivation_title = "Jangan Menyerah!";
-    $motivation_text = "Nilaimu masih di bawah KKM. Jangan berkecil hati, ayo pelajari lagi materinya lalu ulangi mengerjakan kuis ini.";
+    $motivation_text = "Nilaimu masih di bawah KKM. Jangan berkecil hati, ayo pelajari lagi materinya dengan lebih giat.";
     $accent_color = "#d97706"; // Amber/Kuning peringatan
     $bg_motivation = "#fef3c7";
     $border_motivation = "#f59e0b";
@@ -136,14 +136,14 @@ function format_elapsed_time($sec) {
 
             <!-- Tombol Tindakan Navigasi -->
             <div class="row g-3 mb-4">
-                <div class="col-6">
-                    <a href="kuis_kerjakan.php?id_kuis=<?= $id_kuis ?>" class="btn btn-outline-secondary btn-lg w-100 rounded-3 fw-bold py-2 shadow-sm d-flex align-items-center justify-content-center gap-1">
-                        <i class="bi bi-arrow-clockwise"></i>
-                        <span>Ulangi Kuis</span>
+                <div class="col-sm-6">
+                    <a href="kuis.php" class="btn btn-outline-secondary btn-lg w-100 rounded-3 fw-bold py-2 shadow-sm d-flex align-items-center justify-content-center gap-2">
+                        <i class="bi bi-card-checklist"></i>
+                        <span>Daftar Kuis</span>
                     </a>
                 </div>
-                <div class="col-6">
-                    <a href="menu.php" class="btn btn-primary btn-lg w-100 rounded-3 fw-bold py-2 shadow-sm d-flex align-items-center justify-content-center gap-1">
+                <div class="col-sm-6">
+                    <a href="menu.php" class="btn btn-primary btn-lg w-100 rounded-3 fw-bold py-2 shadow-sm d-flex align-items-center justify-content-center gap-2">
                         <i class="bi bi-grid"></i>
                         <span>Menu Materi</span>
                     </a>
