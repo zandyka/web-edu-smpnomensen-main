@@ -84,10 +84,10 @@ if (empty($initials)) $initials = 'SW';
             <li>
                 <a href="riwayat.php" class="<?= $active_page === 'riwayat' ? 'active' : '' ?>">
                     <div class="nav-icon-box">
-                        <i class="bi bi-trophy-fill"></i>
+                        <i class="bi bi-file-earmark-ruled-fill"></i>
                     </div>
-                    <span class="nav-text">Riwayat Nilai</span>
-                    <span class="nav-pill-badge badge-green">Skor</span>
+                    <span class="nav-text">Riwayat &amp; Raport</span>
+                    <span class="nav-pill-badge badge-green">Raport PDF</span>
                 </a>
             </li>
         </ul>

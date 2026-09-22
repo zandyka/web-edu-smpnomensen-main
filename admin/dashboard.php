@@ -17,8 +17,20 @@ try {
     
     $avg_score_raw = $pdo->query("SELECT AVG(skor) FROM tb_hasil")->fetchColumn();
     $rata_rata_nilai = $avg_score_raw !== null ? round($avg_score_raw, 1) : 0;
+
+    // 1.1 Top Leaderboard Siswa
+    $stmt_lead = $pdo->query("
+        SELECT h.*, s.nama_siswa, s.nis, s.kelas, k.judul_kuis
+        FROM tb_hasil h
+        JOIN tb_siswa s ON h.id_siswa = s.id_siswa
+        JOIN tb_kuis k ON h.id_kuis = k.id_kuis
+        ORDER BY h.skor DESC, h.jumlah_benar DESC, h.waktu_selesai ASC
+        LIMIT 5
+    ");
+    $top_leaderboard = $stmt_lead->fetchAll();
 } catch (PDOException $e) {
-    die("Error database saat memuat statistik: " . $e->getMessage());
+    $rata_rata_nilai = 0;
+    $top_leaderboard = [];
 }
 
 // 2. Fetch Log Aktivitas Terakhir
@@ -345,6 +357,67 @@ try {
                     </div>
                 </div>
             </div>
+
+            <!-- Papan Peringkat Kuis (Top Siswa Berprestasi) -->
+            <?php if (!empty($top_leaderboard)): ?>
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                    <h3 class="h6 fw-bold text-dark mb-0">
+                        <i class="bi bi-trophy-fill me-2 text-warning"></i>Papan Peringkat Kuis (Top Siswa Berprestasi)
+                    </h3>
+                    <a href="laporan_nilai.php" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
+                        Buka Laporan Nilai Lengkap
+                    </a>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 10%; text-align: center;">Peringkat</th>
+                                <th style="width: 30%;">Nama Siswa</th>
+                                <th style="width: 15%; text-align: center;">NIS / Kelas</th>
+                                <th style="width: 30%;">Materi Kuis</th>
+                                <th style="width: 15%; text-align: center;">Skor Nilai</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($top_leaderboard as $idx => $lead): ?>
+                                <?php 
+                                $pos = $idx + 1;
+                                $medal = $pos === 1 ? '🥇 Juara 1' : ($pos === 2 ? '🥈 Juara 2' : ($pos === 3 ? '🥉 Juara 3' : '#' . $pos));
+                                ?>
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <span class="badge <?= $pos === 1 ? 'bg-warning text-dark' : ($pos === 2 ? 'bg-secondary text-white' : ($pos === 3 ? 'bg-danger-subtle text-danger' : 'bg-light text-secondary border')) ?> rounded-pill px-2 py-1">
+                                            <?= $medal ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-dark"><?= htmlspecialchars($lead['nama_siswa']) ?></div>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <span class="badge bg-light text-secondary border"><?= htmlspecialchars($lead['nis']) ?></span>
+                                        <span class="fw-semibold ms-1"><?= htmlspecialchars($lead['kelas']) ?></span>
+                                    </td>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 250px;" title="<?= htmlspecialchars($lead['judul_kuis']) ?>">
+                                            <?= htmlspecialchars($lead['judul_kuis']) ?>
+                                        </div>
+                                        <small class="text-muted"><?= date('d M Y - H:i', strtotime($lead['waktu_selesai'])) ?> WIB</small>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <span class="badge <?= $lead['skor'] >= 70 ? 'bg-success text-white' : 'bg-primary text-white' ?> fs-6 px-3 py-1 rounded-pill">
+                                            <?= $lead['skor'] ?>
+                                        </span>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <!-- Aktivitas Terakhir -->
             <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
