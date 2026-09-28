@@ -479,9 +479,9 @@ $has_logo = file_exists($logo_path);
                 <td class="val">Bahasa Inggris (Kelas VII)</td>
             </tr>
             <tr>
-                <td class="label">Nomor Induk Siswa (NIS)</td>
+                <td class="label">NIS / NISN</td>
                 <td class="separator">:</td>
-                <td class="val"><?= htmlspecialchars($siswa['nis']) ?></td>
+                <td class="val"><?= htmlspecialchars($siswa['nis']) ?><?= !empty($siswa['nisn']) ? ' / ' . htmlspecialchars($siswa['nisn']) : '' ?></td>
                 <td class="label">Standar KKM</td>
                 <td class="separator">:</td>
                 <td class="val"><strong>70 Poin</strong></td>

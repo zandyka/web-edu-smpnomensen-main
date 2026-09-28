@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_siswa'])) {
                             'nama' => $nama_siswa,
                             'kelas' => $kelas,
                             'nis' => $nis,
-                            'nisn' => !empty($nisn) ? $nisn : $nis,
+                            'nisn' => !empty($nisn) ? $nisn : null,
                             'pass' => $password_hashed,
                             'id' => $id_siswa
                         ]);
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_siswa'])) {
                             'nama' => $nama_siswa,
                             'kelas' => $kelas,
                             'nis' => $nis,
-                            'nisn' => !empty($nisn) ? $nisn : $nis,
+                            'nisn' => !empty($nisn) ? $nisn : null,
                             'id' => $id_siswa
                         ]);
                     }
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_siswa'])) {
                             'nama' => $nama_siswa,
                             'kelas' => $kelas,
                             'nis' => $nis,
-                            'nisn' => !empty($nisn) ? $nisn : $nis,
+                            'nisn' => !empty($nisn) ? $nisn : null,
                             'pass' => $password_hashed
                         ]);
                         $success_message = "Akun siswa baru kelas $kelas berhasil ditambahkan!";
@@ -424,13 +424,13 @@ try {
                         <!-- NIS (Username) -->
                         <div class="col-md-2">
                             <label class="form-label fw-bold text-secondary small">NIS (Username) <span class="text-danger">*</span>:</label>
-                            <input type="text" name="nis" class="form-control" placeholder="Contoh: 0136442625" required value="<?= htmlspecialchars($siswa_edit_data['nis'] ?? '') ?>">
+                            <input type="text" name="nis" class="form-control" placeholder="Contoh: 26001" required value="<?= htmlspecialchars($siswa_edit_data['nis'] ?? '') ?>">
                         </div>
 
                         <!-- NISN -->
                         <div class="col-md-3">
                             <label class="form-label fw-bold text-secondary small">NISN (Opsional):</label>
-                            <input type="text" name="nisn" class="form-control" placeholder="Nomor Induk Siswa Nasional" value="<?= htmlspecialchars($siswa_edit_data['nisn'] ?? '') ?>">
+                            <input type="text" name="nisn" class="form-control" placeholder="Contoh: 0136442625 (10 digit)" value="<?= htmlspecialchars($siswa_edit_data['nisn'] ?? '') ?>">
                         </div>
 
                         <!-- Password -->

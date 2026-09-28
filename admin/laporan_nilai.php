@@ -31,7 +31,7 @@ if (!in_array($filter_kelas, ['VII-A', 'VII-B', 'VII-C'])) {
 
 // Fetch daftar siswa untuk dropdown filter (hanya kelas 7, jika filter kelas aktif maka filter juga)
 try {
-    $sql_students_list = "SELECT id_siswa, nama_siswa, nis, kelas FROM tb_siswa WHERE kelas LIKE 'VII-%'";
+    $sql_students_list = "SELECT id_siswa, nama_siswa, nis, nisn, kelas FROM tb_siswa WHERE kelas LIKE 'VII-%'";
     $p_st_list = [];
     if (!empty($filter_kelas)) {
         $sql_students_list .= " AND kelas = :kelas";
@@ -73,7 +73,7 @@ $top_overall = null;
 try {
     // Top 7A
     $stmt_top_7a = $pdo->query("
-        SELECT h.*, s.nama_siswa, s.nis, s.kelas, k.judul_kuis 
+        SELECT h.*, s.nama_siswa, s.nis, s.nisn, s.kelas, k.judul_kuis 
         FROM tb_hasil h 
         JOIN tb_siswa s ON h.id_siswa = s.id_siswa 
         JOIN tb_kuis k ON h.id_kuis = k.id_kuis 
@@ -85,7 +85,7 @@ try {
 
     // Top 7B
     $stmt_top_7b = $pdo->query("
-        SELECT h.*, s.nama_siswa, s.nis, s.kelas, k.judul_kuis 
+        SELECT h.*, s.nama_siswa, s.nis, s.nisn, s.kelas, k.judul_kuis 
         FROM tb_hasil h 
         JOIN tb_siswa s ON h.id_siswa = s.id_siswa 
         JOIN tb_kuis k ON h.id_kuis = k.id_kuis 
@@ -97,7 +97,7 @@ try {
 
     // Top 7C
     $stmt_top_7c = $pdo->query("
-        SELECT h.*, s.nama_siswa, s.nis, s.kelas, k.judul_kuis 
+        SELECT h.*, s.nama_siswa, s.nis, s.nisn, s.kelas, k.judul_kuis 
         FROM tb_hasil h 
         JOIN tb_siswa s ON h.id_siswa = s.id_siswa 
         JOIN tb_kuis k ON h.id_kuis = k.id_kuis 
@@ -109,7 +109,7 @@ try {
 
     // Top Overall
     $stmt_top_all = $pdo->query("
-        SELECT h.*, s.nama_siswa, s.nis, s.kelas, k.judul_kuis 
+        SELECT h.*, s.nama_siswa, s.nis, s.nisn, s.kelas, k.judul_kuis 
         FROM tb_hasil h 
         JOIN tb_siswa s ON h.id_siswa = s.id_siswa 
         JOIN tb_kuis k ON h.id_kuis = k.id_kuis 
@@ -125,7 +125,7 @@ try {
 // Query untuk Tab 1: Log Seluruh Nilai
 try {
     $sql_results = "
-        SELECT h.*, s.nama_siswa, s.nis, s.kelas, k.judul_kuis, k.kategori_materi
+        SELECT h.*, s.nama_siswa, s.nis, s.nisn, s.kelas, k.judul_kuis, k.kategori_materi
         FROM tb_hasil h
         JOIN tb_siswa s ON h.id_siswa = s.id_siswa
         JOIN tb_kuis k ON h.id_kuis = k.id_kuis
@@ -179,7 +179,7 @@ $nama_bulan_arr = [
 
 // Fetch siswa khusus untuk tab raport
 try {
-    $sql_r_students = "SELECT id_siswa, nama_siswa, nis, kelas FROM tb_siswa WHERE kelas LIKE 'VII-%'";
+    $sql_r_students = "SELECT id_siswa, nama_siswa, nis, nisn, kelas FROM tb_siswa WHERE kelas LIKE 'VII-%'";
     $p_r_st = [];
     if (!empty($raport_kelas)) {
         $sql_r_students .= " AND kelas = :kelas";
@@ -610,7 +610,12 @@ if ($raport_siswa_id > 0) {
                                     <h5 class="fw-bold text-dark mb-1 fs-6 text-truncate" title="<?= htmlspecialchars($top_7a['nama_siswa']) ?>">
                                         <?= htmlspecialchars($top_7a['nama_siswa']) ?>
                                     </h5>
-                                    <div class="text-muted small mb-2">NIS: <?= htmlspecialchars($top_7a['nis']) ?></div>
+                                    <div class="text-muted small mb-2">
+                                        NIS: <?= htmlspecialchars($top_7a['nis']) ?>
+                                        <?php if (!empty($top_7a['nisn'])): ?>
+                                            &bull; NISN: <?= htmlspecialchars($top_7a['nisn']) ?>
+                                        <?php endif; ?>
+                                    </div>
                                     <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border mb-2">
                                         <span class="small text-secondary fw-semibold text-truncate me-2" title="<?= htmlspecialchars($top_7a['judul_kuis']) ?>">
                                             <?= htmlspecialchars($top_7a['judul_kuis']) ?>
@@ -645,7 +650,12 @@ if ($raport_siswa_id > 0) {
                                     <h5 class="fw-bold text-dark mb-1 fs-6 text-truncate" title="<?= htmlspecialchars($top_7b['nama_siswa']) ?>">
                                         <?= htmlspecialchars($top_7b['nama_siswa']) ?>
                                     </h5>
-                                    <div class="text-muted small mb-2">NIS: <?= htmlspecialchars($top_7b['nis']) ?></div>
+                                    <div class="text-muted small mb-2">
+                                        NIS: <?= htmlspecialchars($top_7b['nis']) ?>
+                                        <?php if (!empty($top_7b['nisn'])): ?>
+                                            &bull; NISN: <?= htmlspecialchars($top_7b['nisn']) ?>
+                                        <?php endif; ?>
+                                    </div>
                                     <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border mb-2">
                                         <span class="small text-secondary fw-semibold text-truncate me-2" title="<?= htmlspecialchars($top_7b['judul_kuis']) ?>">
                                             <?= htmlspecialchars($top_7b['judul_kuis']) ?>
@@ -680,7 +690,12 @@ if ($raport_siswa_id > 0) {
                                     <h5 class="fw-bold text-dark mb-1 fs-6 text-truncate" title="<?= htmlspecialchars($top_7c['nama_siswa']) ?>">
                                         <?= htmlspecialchars($top_7c['nama_siswa']) ?>
                                     </h5>
-                                    <div class="text-muted small mb-2">NIS: <?= htmlspecialchars($top_7c['nis']) ?></div>
+                                    <div class="text-muted small mb-2">
+                                        NIS: <?= htmlspecialchars($top_7c['nis']) ?>
+                                        <?php if (!empty($top_7c['nisn'])): ?>
+                                            &bull; NISN: <?= htmlspecialchars($top_7c['nisn']) ?>
+                                        <?php endif; ?>
+                                    </div>
                                     <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border mb-2">
                                         <span class="small text-secondary fw-semibold text-truncate me-2" title="<?= htmlspecialchars($top_7c['judul_kuis']) ?>">
                                             <?= htmlspecialchars($top_7c['judul_kuis']) ?>
@@ -831,7 +846,12 @@ if ($raport_siswa_id > 0) {
                                             <td class="py-3 px-3 text-center text-secondary fw-semibold"><?= $no++ ?></td>
                                             <td class="py-3 px-3 fw-bold text-dark">
                                                 <?= htmlspecialchars($row['nama_siswa']) ?>
-                                                <div class="small text-muted fw-normal">NIS: <?= htmlspecialchars($row['nis']) ?></div>
+                                                <div class="small text-muted fw-normal">
+                                                    NIS: <?= htmlspecialchars($row['nis']) ?>
+                                                    <?php if (!empty($row['nisn'])): ?>
+                                                        &bull; NISN: <?= htmlspecialchars($row['nisn']) ?>
+                                                    <?php endif; ?>
+                                                </div>
                                             </td>
                                             <td class="py-3 px-3 text-center">
                                                 <span class="badge <?= $badge_k ?> px-2 py-1 rounded-pill fw-bold">
@@ -976,9 +996,12 @@ if ($raport_siswa_id > 0) {
                                 </div>
                                 <h3 class="h4 fw-bold text-white mb-1"><?= htmlspecialchars($raport_siswa['nama_siswa']) ?></h3>
                                 <div class="text-light opacity-75 small">
-                                    NIS: <strong><?= htmlspecialchars($raport_siswa['nis']) ?></strong> &bull; 
-                                    Kelas: <strong><?= htmlspecialchars($raport_siswa['kelas']) ?></strong> &bull; 
-                                    SMP Swasta Nommensen
+                                    NIS: <strong><?= htmlspecialchars($raport_siswa['nis']) ?></strong>
+                                    <?php if (!empty($raport_siswa['nisn'])): ?>
+                                        &bull; NISN: <strong><?= htmlspecialchars($raport_siswa['nisn']) ?></strong>
+                                    <?php endif; ?>
+                                    &bull; Kelas: <strong><?= htmlspecialchars($raport_siswa['kelas']) ?></strong>
+                                    &bull; SMP Swasta Nommensen
                                 </div>
                             </div>
                             <div>
