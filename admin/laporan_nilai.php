@@ -1,10 +1,12 @@
 <?php
 /**
  * File: admin/laporan_nilai.php
- * Deskripsi: Halaman Laporan Hasil Nilai & Raport Evaluasi Siswa.
- *            Dilengkapi dengan 2 Tab:
- *            1. Log Seluruh Nilai (Rekap lengkap kuis dengan filter per siswa/kuis)
- *            2. Raport Siswa (Filter Mingguan/Bulanan/Semua dengan pratinjau & generate PDF resmi)
+ * Deskripsi: Halaman Laporan Hasil Nilai & Raport Evaluasi Siswa Kelas 7 (VII-A, VII-B, VII-C).
+ *            Dilengkapi dengan:
+ *            1. Pemisahan data per kelas: 7A, 7B, dan 7C
+ *            2. Kartu Highlight Siswa dengan Nilai Tertinggi (Bintang Prestasi per kelas & overall)
+ *            3. Tanggal & Jam pengerjaan kuis lengkap dan presisi
+ *            4. Tab Log Seluruh Nilai & Tab Raport Siswa (Cetak PDF Mingguan / Bulanan)
  */
 
 // Memroteksi halaman ini agar hanya bisa diakses oleh guru yang sudah login
@@ -17,12 +19,28 @@ require_once '../config.php';
 $active_tab = isset($_GET['tab']) && $_GET['tab'] === 'raport' ? 'raport' : 'log';
 
 // --- DATA FILTER TAB 1: LOG NILAI ---
+$filter_kelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
 $filter_siswa = isset($_GET['id_siswa']) ? intval($_GET['id_siswa']) : 0;
 $filter_kuis = isset($_GET['id_kuis']) ? intval($_GET['id_kuis']) : 0;
+$filter_tanggal = isset($_GET['tanggal']) ? trim($_GET['tanggal']) : '';
 
-// Fetch daftar siswa untuk dropdown filter
+// Validasi filter kelas
+if (!in_array($filter_kelas, ['VII-A', 'VII-B', 'VII-C'])) {
+    $filter_kelas = '';
+}
+
+// Fetch daftar siswa untuk dropdown filter (hanya kelas 7, jika filter kelas aktif maka filter juga)
 try {
-    $students_list = $pdo->query("SELECT id_siswa, nama_siswa, nis, kelas FROM tb_siswa ORDER BY nama_siswa ASC")->fetchAll();
+    $sql_students_list = "SELECT id_siswa, nama_siswa, nis, kelas FROM tb_siswa WHERE kelas LIKE 'VII-%'";
+    $p_st_list = [];
+    if (!empty($filter_kelas)) {
+        $sql_students_list .= " AND kelas = :kelas";
+        $p_st_list['kelas'] = $filter_kelas;
+    }
+    $sql_students_list .= " ORDER BY kelas ASC, nama_siswa ASC";
+    $stmt_st_list = $pdo->prepare($sql_students_list);
+    $stmt_st_list->execute($p_st_list);
+    $students_list = $stmt_st_list->fetchAll();
 } catch (PDOException $e) {
     $students_list = [];
 }
@@ -34,6 +52,76 @@ try {
     $quizzes_list = [];
 }
 
+// Hitung total data log per kelas untuk badge tab
+try {
+    $count_log_all = $pdo->query("SELECT COUNT(*) FROM tb_hasil h JOIN tb_siswa s ON h.id_siswa = s.id_siswa WHERE s.kelas LIKE 'VII-%'")->fetchColumn();
+    $count_log_7a = $pdo->query("SELECT COUNT(*) FROM tb_hasil h JOIN tb_siswa s ON h.id_siswa = s.id_siswa WHERE s.kelas = 'VII-A'")->fetchColumn();
+    $count_log_7b = $pdo->query("SELECT COUNT(*) FROM tb_hasil h JOIN tb_siswa s ON h.id_siswa = s.id_siswa WHERE s.kelas = 'VII-B'")->fetchColumn();
+    $count_log_7c = $pdo->query("SELECT COUNT(*) FROM tb_hasil h JOIN tb_siswa s ON h.id_siswa = s.id_siswa WHERE s.kelas = 'VII-C'")->fetchColumn();
+} catch (PDOException $e) {
+    $count_log_all = $count_log_7a = $count_log_7b = $count_log_7c = 0;
+}
+
+// ===================================================================
+// SISWA DENGAN NILAI TERTINGGI (TOP SCORERS) PER KELAS 7A, 7B, 7C
+// ===================================================================
+$top_7a = null;
+$top_7b = null;
+$top_7c = null;
+$top_overall = null;
+
+try {
+    // Top 7A
+    $stmt_top_7a = $pdo->query("
+        SELECT h.*, s.nama_siswa, s.nis, s.kelas, k.judul_kuis 
+        FROM tb_hasil h 
+        JOIN tb_siswa s ON h.id_siswa = s.id_siswa 
+        JOIN tb_kuis k ON h.id_kuis = k.id_kuis 
+        WHERE s.kelas = 'VII-A' 
+        ORDER BY h.skor DESC, h.waktu_selesai DESC 
+        LIMIT 1
+    ");
+    $top_7a = $stmt_top_7a->fetch();
+
+    // Top 7B
+    $stmt_top_7b = $pdo->query("
+        SELECT h.*, s.nama_siswa, s.nis, s.kelas, k.judul_kuis 
+        FROM tb_hasil h 
+        JOIN tb_siswa s ON h.id_siswa = s.id_siswa 
+        JOIN tb_kuis k ON h.id_kuis = k.id_kuis 
+        WHERE s.kelas = 'VII-B' 
+        ORDER BY h.skor DESC, h.waktu_selesai DESC 
+        LIMIT 1
+    ");
+    $top_7b = $stmt_top_7b->fetch();
+
+    // Top 7C
+    $stmt_top_7c = $pdo->query("
+        SELECT h.*, s.nama_siswa, s.nis, s.kelas, k.judul_kuis 
+        FROM tb_hasil h 
+        JOIN tb_siswa s ON h.id_siswa = s.id_siswa 
+        JOIN tb_kuis k ON h.id_kuis = k.id_kuis 
+        WHERE s.kelas = 'VII-C' 
+        ORDER BY h.skor DESC, h.waktu_selesai DESC 
+        LIMIT 1
+    ");
+    $top_7c = $stmt_top_7c->fetch();
+
+    // Top Overall
+    $stmt_top_all = $pdo->query("
+        SELECT h.*, s.nama_siswa, s.nis, s.kelas, k.judul_kuis 
+        FROM tb_hasil h 
+        JOIN tb_siswa s ON h.id_siswa = s.id_siswa 
+        JOIN tb_kuis k ON h.id_kuis = k.id_kuis 
+        WHERE s.kelas LIKE 'VII-%' 
+        ORDER BY h.skor DESC, h.waktu_selesai DESC 
+        LIMIT 1
+    ");
+    $top_overall = $stmt_top_all->fetch();
+} catch (PDOException $e) {
+    // silent
+}
+
 // Query untuk Tab 1: Log Seluruh Nilai
 try {
     $sql_results = "
@@ -41,10 +129,14 @@ try {
         FROM tb_hasil h
         JOIN tb_siswa s ON h.id_siswa = s.id_siswa
         JOIN tb_kuis k ON h.id_kuis = k.id_kuis
-        WHERE 1=1
+        WHERE s.kelas LIKE 'VII-%'
     ";
     
     $params = [];
+    if (!empty($filter_kelas)) {
+        $sql_results .= " AND s.kelas = :kelas";
+        $params['kelas'] = $filter_kelas;
+    }
     if ($filter_siswa > 0) {
         $sql_results .= " AND h.id_siswa = :id_siswa";
         $params['id_siswa'] = $filter_siswa;
@@ -52,6 +144,10 @@ try {
     if ($filter_kuis > 0) {
         $sql_results .= " AND h.id_kuis = :id_kuis";
         $params['id_kuis'] = $filter_kuis;
+    }
+    if (!empty($filter_tanggal)) {
+        $sql_results .= " AND DATE(h.waktu_selesai) = :tanggal";
+        $params['tanggal'] = $filter_tanggal;
     }
     
     $sql_results .= " ORDER BY h.waktu_selesai DESC";
@@ -64,6 +160,10 @@ try {
 }
 
 // --- DATA FILTER TAB 2: RAPORT SISWA ---
+$raport_kelas = isset($_GET['raport_kelas']) ? trim($_GET['raport_kelas']) : '';
+if (!in_array($raport_kelas, ['VII-A', 'VII-B', 'VII-C'])) {
+    $raport_kelas = '';
+}
 $raport_siswa_id = isset($_GET['raport_siswa']) ? intval($_GET['raport_siswa']) : 0;
 $raport_tipe = isset($_GET['raport_tipe']) ? $_GET['raport_tipe'] : 'bulanan';
 $raport_bulan = isset($_GET['raport_bulan']) ? intval($_GET['raport_bulan']) : intval(date('m'));
@@ -76,6 +176,22 @@ $nama_bulan_arr = [
     5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
     9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
 ];
+
+// Fetch siswa khusus untuk tab raport
+try {
+    $sql_r_students = "SELECT id_siswa, nama_siswa, nis, kelas FROM tb_siswa WHERE kelas LIKE 'VII-%'";
+    $p_r_st = [];
+    if (!empty($raport_kelas)) {
+        $sql_r_students .= " AND kelas = :kelas";
+        $p_r_st['kelas'] = $raport_kelas;
+    }
+    $sql_r_students .= " ORDER BY kelas ASC, nama_siswa ASC";
+    $stmt_r_st = $pdo->prepare($sql_r_students);
+    $stmt_r_st->execute($p_r_st);
+    $raport_students_list = $stmt_r_st->fetchAll();
+} catch (PDOException $e) {
+    $raport_students_list = [];
+}
 
 $raport_siswa = null;
 $raport_results = [];
@@ -165,7 +281,7 @@ if ($raport_siswa_id > 0) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Nilai & Raport Siswa - Nommensen Admin</title>
+    <title>Laporan Nilai & Raport Siswa Kelas 7 - Nommensen Admin</title>
     
     <!-- Impor Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -320,7 +436,49 @@ if ($raport_siswa_id > 0) {
             border-bottom: 3px solid #2563eb;
         }
 
-        /* Form Filter Inline */
+        .class-pill-btn {
+            border-radius: 10px;
+            padding: 0.55rem 1.15rem;
+            font-weight: 700;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border: 1.5px solid #cbd5e1;
+            background: #ffffff;
+            color: #475569;
+        }
+
+        .class-pill-btn:hover {
+            border-color: #2563eb;
+            color: #2563eb;
+            background: #eff6ff;
+        }
+
+        .class-pill-btn.active {
+            background-color: #2563eb;
+            color: #ffffff;
+            border-color: #1d4ed8;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+        }
+
+        /* Top Scorer Card */
+        .top-scorer-card {
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .top-scorer-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(0,0,0,0.08);
+        }
+
         .filter-card {
             background-color: #ffffff;
             border: 1px solid #e2e8f0;
@@ -402,10 +560,10 @@ if ($raport_siswa_id > 0) {
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                 <div>
                     <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.75rem; font-weight: 800; color: #0f172a; margin: 0;">
-                        Laporan Nilai &amp; Raport Siswa
+                        Laporan Nilai &amp; Raport Siswa Kelas 7
                     </h2>
                     <p style="color: #64748b; font-size: 0.95rem; margin-top: 0.35rem; margin-bottom: 0;">
-                        Pantau seluruh riwayat pengerjaan kuis siswa atau cetak Raport Evaluasi Belajar resmi per siswa (Mingguan / Bulanan / Semua).
+                        Rekapitulasi nilai kuis dengan pemisahan <strong>Kelas 7A, 7B, 7C</strong>, siswa berprestasi tertinggi, serta waktu pengerjaan (tanggal &amp; jam lengkap).
                     </p>
                 </div>
             </div>
@@ -413,13 +571,13 @@ if ($raport_siswa_id > 0) {
             <!-- Nav Tabs Navigasi Antara Log Nilai & Raport Siswa -->
             <ul class="nav nav-tabs nav-tabs-custom" id="reportTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <a class="nav-link <?= $active_tab === 'log' ? 'active' : '' ?>" href="laporan_nilai.php?tab=log">
+                    <a class="nav-link <?= $active_tab === 'log' ? 'active' : '' ?>" href="laporan_nilai.php?tab=log<?= !empty($filter_kelas) ? '&kelas=' . urlencode($filter_kelas) : '' ?>">
                         <i class="bi bi-table"></i>
-                        Log Seluruh Nilai Siswa
+                        Log Seluruh Nilai Kuis (Kelas 7)
                     </a>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <a class="nav-link <?= $active_tab === 'raport' ? 'active' : '' ?>" href="laporan_nilai.php?tab=raport">
+                    <a class="nav-link <?= $active_tab === 'raport' ? 'active' : '' ?>" href="laporan_nilai.php?tab=raport<?= !empty($filter_kelas) ? '&raport_kelas=' . urlencode($filter_kelas) : '' ?>">
                         <i class="bi bi-file-earmark-pdf-fill text-danger"></i>
                         Raport Siswa (Cetak PDF Mingguan / Bulanan)
                     </a>
@@ -428,28 +586,170 @@ if ($raport_siswa_id > 0) {
 
             <?php if ($active_tab === 'log'): ?>
                 <!-- ================= TAB 1: LOG SELURUH NILAI ================= -->
-                
+
+                <!-- SEKSI HIGHLIGHT: SISWA DENGAN NILAI TERTINGGI (TOP SCORERS PER KELAS 7A, 7B, 7C) -->
+                <div class="mb-4">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="badge bg-warning text-dark px-3 py-1 rounded-pill fw-bold">
+                            <i class="bi bi-trophy-fill me-1"></i> BINTANG PRESTASI
+                        </span>
+                        <h4 class="h5 fw-bold text-dark mb-0">Siswa Peraih Nilai Tertinggi per Rombel</h4>
+                    </div>
+
+                    <div class="row row-cols-1 row-cols-md-3 g-3">
+                        <!-- Top Scorer 7A -->
+                        <div class="col">
+                            <div class="top-scorer-card p-3 shadow-sm h-100" style="border-top: 4px solid #f59e0b;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-warning-subtle text-warning-emphasis fw-bold px-3 py-1 rounded-pill">
+                                        KELAS VII-A (7A)
+                                    </span>
+                                    <span class="fs-4">🥇</span>
+                                </div>
+                                <?php if ($top_7a): ?>
+                                    <h5 class="fw-bold text-dark mb-1 fs-6 text-truncate" title="<?= htmlspecialchars($top_7a['nama_siswa']) ?>">
+                                        <?= htmlspecialchars($top_7a['nama_siswa']) ?>
+                                    </h5>
+                                    <div class="text-muted small mb-2">NIS: <?= htmlspecialchars($top_7a['nis']) ?></div>
+                                    <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border mb-2">
+                                        <span class="small text-secondary fw-semibold text-truncate me-2" title="<?= htmlspecialchars($top_7a['judul_kuis']) ?>">
+                                            <?= htmlspecialchars($top_7a['judul_kuis']) ?>
+                                        </span>
+                                        <span class="badge bg-success fs-6 fw-bold px-2 py-1">
+                                            Skor <?= $top_7a['skor'] ?>
+                                        </span>
+                                    </div>
+                                    <div class="small text-muted d-flex align-items-center justify-content-between">
+                                        <span><i class="bi bi-calendar-event me-1"></i><?= date('d M Y', strtotime($top_7a['waktu_selesai'])) ?></span>
+                                        <span><i class="bi bi-clock me-1"></i><?= date('H:i', strtotime($top_7a['waktu_selesai'])) ?> WIB</span>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="text-center py-4 text-muted small">
+                                        <i class="bi bi-hourglass-split d-block fs-3 mb-1"></i>
+                                        Belum ada nilai kuis di Kelas VII-A
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- Top Scorer 7B -->
+                        <div class="col">
+                            <div class="top-scorer-card p-3 shadow-sm h-100" style="border-top: 4px solid #06b6d4;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-info-subtle text-info-emphasis fw-bold px-3 py-1 rounded-pill">
+                                        KELAS VII-B (7B)
+                                    </span>
+                                    <span class="fs-4">🥈</span>
+                                </div>
+                                <?php if ($top_7b): ?>
+                                    <h5 class="fw-bold text-dark mb-1 fs-6 text-truncate" title="<?= htmlspecialchars($top_7b['nama_siswa']) ?>">
+                                        <?= htmlspecialchars($top_7b['nama_siswa']) ?>
+                                    </h5>
+                                    <div class="text-muted small mb-2">NIS: <?= htmlspecialchars($top_7b['nis']) ?></div>
+                                    <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border mb-2">
+                                        <span class="small text-secondary fw-semibold text-truncate me-2" title="<?= htmlspecialchars($top_7b['judul_kuis']) ?>">
+                                            <?= htmlspecialchars($top_7b['judul_kuis']) ?>
+                                        </span>
+                                        <span class="badge bg-success fs-6 fw-bold px-2 py-1">
+                                            Skor <?= $top_7b['skor'] ?>
+                                        </span>
+                                    </div>
+                                    <div class="small text-muted d-flex align-items-center justify-content-between">
+                                        <span><i class="bi bi-calendar-event me-1"></i><?= date('d M Y', strtotime($top_7b['waktu_selesai'])) ?></span>
+                                        <span><i class="bi bi-clock me-1"></i><?= date('H:i', strtotime($top_7b['waktu_selesai'])) ?> WIB</span>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="text-center py-4 text-muted small">
+                                        <i class="bi bi-hourglass-split d-block fs-3 mb-1"></i>
+                                        Belum ada nilai kuis di Kelas VII-B
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- Top Scorer 7C -->
+                        <div class="col">
+                            <div class="top-scorer-card p-3 shadow-sm h-100" style="border-top: 4px solid #10b981;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-success-subtle text-success-emphasis fw-bold px-3 py-1 rounded-pill">
+                                        KELAS VII-C (7C)
+                                    </span>
+                                    <span class="fs-4">🥉</span>
+                                </div>
+                                <?php if ($top_7c): ?>
+                                    <h5 class="fw-bold text-dark mb-1 fs-6 text-truncate" title="<?= htmlspecialchars($top_7c['nama_siswa']) ?>">
+                                        <?= htmlspecialchars($top_7c['nama_siswa']) ?>
+                                    </h5>
+                                    <div class="text-muted small mb-2">NIS: <?= htmlspecialchars($top_7c['nis']) ?></div>
+                                    <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border mb-2">
+                                        <span class="small text-secondary fw-semibold text-truncate me-2" title="<?= htmlspecialchars($top_7c['judul_kuis']) ?>">
+                                            <?= htmlspecialchars($top_7c['judul_kuis']) ?>
+                                        </span>
+                                        <span class="badge bg-success fs-6 fw-bold px-2 py-1">
+                                            Skor <?= $top_7c['skor'] ?>
+                                        </span>
+                                    </div>
+                                    <div class="small text-muted d-flex align-items-center justify-content-between">
+                                        <span><i class="bi bi-calendar-event me-1"></i><?= date('d M Y', strtotime($top_7c['waktu_selesai'])) ?></span>
+                                        <span><i class="bi bi-clock me-1"></i><?= date('H:i', strtotime($top_7c['waktu_selesai'])) ?> WIB</span>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="text-center py-4 text-muted small">
+                                        <i class="bi bi-hourglass-split d-block fs-3 mb-1"></i>
+                                        Belum ada nilai kuis di Kelas VII-C
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Pemisahan Kelas 7A, 7B, 7C -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="laporan_nilai.php?tab=log" class="class-pill-btn <?= empty($filter_kelas) ? 'active' : '' ?>">
+                            <i class="bi bi-collection-fill"></i>
+                            Semua Kelas 7 (<?= $count_log_all ?>)
+                        </a>
+                        <a href="laporan_nilai.php?tab=log&kelas=VII-A" class="class-pill-btn <?= $filter_kelas === 'VII-A' ? 'active' : '' ?>">
+                            <i class="bi bi-award-fill text-warning"></i>
+                            Kelas VII-A / 7A (<?= $count_log_7a ?>)
+                        </a>
+                        <a href="laporan_nilai.php?tab=log&kelas=VII-B" class="class-pill-btn <?= $filter_kelas === 'VII-B' ? 'active' : '' ?>">
+                            <i class="bi bi-award-fill text-info"></i>
+                            Kelas VII-B / 7B (<?= $count_log_7b ?>)
+                        </a>
+                        <a href="laporan_nilai.php?tab=log&kelas=VII-C" class="class-pill-btn <?= $filter_kelas === 'VII-C' ? 'active' : '' ?>">
+                            <i class="bi bi-award-fill text-success"></i>
+                            Kelas VII-C / 7C (<?= $count_log_7c ?>)
+                        </a>
+                    </div>
+                </div>
+
                 <!-- Form Filter Pencarian Log -->
                 <div class="filter-card">
                     <form action="laporan_nilai.php" method="GET" class="row g-3 align-items-end">
                         <input type="hidden" name="tab" value="log">
+                        <?php if (!empty($filter_kelas)): ?>
+                            <input type="hidden" name="kelas" value="<?= htmlspecialchars($filter_kelas) ?>">
+                        <?php endif; ?>
                         
                         <!-- Filter Siswa -->
-                        <div class="col-md-5">
-                            <label class="form-label fw-bold text-secondary small">Filter Berdasarkan Siswa:</label>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-secondary small">Filter Siswa:</label>
                             <select name="id_siswa" class="form-select">
-                                <option value="0">-- Semua Siswa --</option>
+                                <option value="0">-- Semua Siswa <?= !empty($filter_kelas) ? "($filter_kelas)" : 'Kelas 7' ?> --</option>
                                 <?php foreach ($students_list as $student): ?>
                                     <option value="<?= $student['id_siswa'] ?>" <?= $filter_siswa === intval($student['id_siswa']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($student['nama_siswa']) ?> (NIS: <?= htmlspecialchars($student['nis']) ?> - Kelas: <?= htmlspecialchars($student['kelas']) ?>)
+                                        <?= htmlspecialchars($student['nama_siswa']) ?> (<?= htmlspecialchars($student['kelas']) ?> - NIS: <?= htmlspecialchars($student['nis']) ?>)
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
 
                         <!-- Filter Kuis -->
-                        <div class="col-md-5">
-                            <label class="form-label fw-bold text-secondary small">Filter Berdasarkan Kuis:</label>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-secondary small">Filter Kuis:</label>
                             <select name="id_kuis" class="form-select">
                                 <option value="0">-- Semua Kuis --</option>
                                 <?php foreach ($quizzes_list as $quiz): ?>
@@ -460,13 +760,24 @@ if ($raport_siswa_id > 0) {
                             </select>
                         </div>
 
+                        <!-- Filter Tanggal Pengerjaan -->
+                        <div class="col-md-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label fw-bold text-secondary small mb-0">Tanggal Pengerjaan:</label>
+                                <a href="laporan_nilai.php?tab=log<?= !empty($filter_kelas) ? '&kelas=' . urlencode($filter_kelas) : '' ?>&tanggal=<?= date('Y-m-d') ?>" class="badge bg-primary-subtle text-primary text-decoration-none small">
+                                    Hari Ini
+                                </a>
+                            </div>
+                            <input type="date" name="tanggal" class="form-control" value="<?= htmlspecialchars($filter_tanggal) ?>">
+                        </div>
+
                         <!-- Tombol Aksi -->
                         <div class="col-md-2 d-flex gap-2">
                             <button type="submit" class="btn btn-primary fw-bold w-100 py-2">
                                 <i class="bi bi-filter me-1"></i> Filter
                             </button>
-                            <?php if ($filter_siswa > 0 || $filter_kuis > 0): ?>
-                                <a href="laporan_nilai.php?tab=log" class="btn btn-outline-secondary py-2" title="Reset Filter">
+                            <?php if ($filter_siswa > 0 || $filter_kuis > 0 || !empty($filter_tanggal)): ?>
+                                <a href="laporan_nilai.php?tab=log<?= !empty($filter_kelas) ? '&kelas=' . urlencode($filter_kelas) : '' ?>" class="btn btn-outline-secondary py-2" title="Reset Filter">
                                     <i class="bi bi-arrow-counterclockwise"></i>
                                 </a>
                             <?php endif; ?>
@@ -477,24 +788,24 @@ if ($raport_siswa_id > 0) {
                 <!-- Info Header Rekap -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div class="text-secondary small">
-                        Menampilkan <strong><?= count($results) ?></strong> rekaman data hasil kuis.
+                        Menampilkan <strong><?= count($results) ?></strong> rekaman data hasil kuis <?= !empty($filter_kelas) ? "pada <strong>Kelas $filter_kelas</strong>" : "seluruh Kelas 7" ?><?= !empty($filter_tanggal) ? " pada tanggal <strong>" . date('d M Y', strtotime($filter_tanggal)) . "</strong>" : "" ?>.
                     </div>
                 </div>
 
                 <!-- Tabel Daftar Laporan Nilai -->
-                <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden mb-4">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
+                                    <th class="py-3 px-3 text-center" style="width: 50px;">No</th>
                                     <th class="py-3 px-3">Nama Siswa</th>
-                                    <th class="py-3 px-3 text-center">NIS</th>
-                                    <th class="py-3 px-3 text-center">Kelas</th>
+                                    <th class="py-3 px-3 text-center" style="width: 110px;">Kelas</th>
                                     <th class="py-3 px-3">Nama Kuis</th>
-                                    <th class="py-3 px-3 text-center">Skor</th>
-                                    <th class="py-3 px-3 text-center">Detail Jawaban</th>
-                                    <th class="py-3 px-3 text-end">Waktu Selesai</th>
-                                    <th class="py-3 px-3 text-center">Aksi Raport</th>
+                                    <th class="py-3 px-3 text-center" style="width: 100px;">Skor</th>
+                                    <th class="py-3 px-3 text-center" style="width: 140px;">Benar / Salah</th>
+                                    <th class="py-3 px-3" style="width: 220px;">Tanggal &amp; Jam Pengerjaan</th>
+                                    <th class="py-3 px-3 text-center" style="width: 110px;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -506,23 +817,30 @@ if ($raport_siswa_id > 0) {
                                         </td>
                                     </tr>
                                 <?php else: ?>
-                                    <?php foreach ($results as $row): ?>
+                                    <?php $no = 1; foreach ($results as $row): ?>
                                         <?php 
                                         $is_passed = $row['skor'] >= 70;
                                         $score_color = $is_passed ? '#16a34a' : '#dc2626';
+                                        
+                                        $badge_k = 'bg-secondary';
+                                        if ($row['kelas'] === 'VII-A') $badge_k = 'bg-warning-subtle text-warning-emphasis border border-warning-subtle';
+                                        elseif ($row['kelas'] === 'VII-B') $badge_k = 'bg-info-subtle text-info-emphasis border border-info-subtle';
+                                        elseif ($row['kelas'] === 'VII-C') $badge_k = 'bg-success-subtle text-success-emphasis border border-success-subtle';
                                         ?>
                                         <tr>
+                                            <td class="py-3 px-3 text-center text-secondary fw-semibold"><?= $no++ ?></td>
                                             <td class="py-3 px-3 fw-bold text-dark">
                                                 <?= htmlspecialchars($row['nama_siswa']) ?>
+                                                <div class="small text-muted fw-normal">NIS: <?= htmlspecialchars($row['nis']) ?></div>
                                             </td>
-                                            <td class="py-3 px-3 text-center text-muted"><?= htmlspecialchars($row['nis']) ?></td>
                                             <td class="py-3 px-3 text-center">
-                                                <span class="badge bg-light text-dark border">
+                                                <span class="badge <?= $badge_k ?> px-2 py-1 rounded-pill fw-bold">
                                                     <?= htmlspecialchars($row['kelas']) ?>
                                                 </span>
                                             </td>
                                             <td class="py-3 px-3 fw-semibold text-primary">
                                                 <?= htmlspecialchars($row['judul_kuis']) ?>
+                                                <div class="small text-muted fw-normal"><?= htmlspecialchars($row['kategori_materi']) ?></div>
                                             </td>
                                             <td class="py-3 px-3 text-center fw-bold fs-5" style="color: <?= $score_color ?>;">
                                                 <?= $row['skor'] ?>
@@ -531,11 +849,19 @@ if ($raport_siswa_id > 0) {
                                                 <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i><?= $row['jumlah_benar'] ?></span> / 
                                                 <span class="text-danger"><i class="bi bi-x-circle-fill me-1"></i><?= $row['jumlah_salah'] ?></span>
                                             </td>
-                                            <td class="py-3 px-3 text-end text-muted small">
-                                                <?= date('d M Y - H:i', strtotime($row['waktu_selesai'])) ?> WIB
+                                            <!-- KOLOM TANGGAL & JAM LENGKAP -->
+                                            <td class="py-3 px-3">
+                                                <div class="fw-semibold text-dark">
+                                                    <i class="bi bi-calendar-event text-primary me-1"></i>
+                                                    <?= date('d M Y', strtotime($row['waktu_selesai'])) ?>
+                                                </div>
+                                                <div class="small text-muted">
+                                                    <i class="bi bi-clock me-1 text-secondary"></i>
+                                                    Pukul <?= date('H:i:s', strtotime($row['waktu_selesai'])) ?> WIB
+                                                </div>
                                             </td>
                                             <td class="py-3 px-3 text-center">
-                                                <a href="laporan_nilai.php?tab=raport&raport_siswa=<?= $row['id_siswa'] ?>" class="btn btn-sm btn-outline-primary" title="Buka Raport Siswa Ini">
+                                                <a href="laporan_nilai.php?tab=raport&raport_kelas=<?= urlencode($row['kelas']) ?>&raport_siswa=<?= $row['id_siswa'] ?>" class="btn btn-sm btn-outline-primary" title="Buka Raport Siswa Ini">
                                                     <i class="bi bi-file-earmark-person"></i> Raport
                                                 </a>
                                             </td>
@@ -555,26 +881,37 @@ if ($raport_siswa_id > 0) {
                     <form action="laporan_nilai.php" method="GET" class="row g-3 align-items-end" id="raportFilterForm">
                         <input type="hidden" name="tab" value="raport">
 
+                        <!-- Pilihan Kelas (7A, 7B, 7C) -->
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold text-dark small">Pilih Rombel / Kelas:</label>
+                            <select name="raport_kelas" class="form-select" onchange="this.form.submit()">
+                                <option value="">Semua Kelas 7</option>
+                                <option value="VII-A" <?= $raport_kelas === 'VII-A' ? 'selected' : '' ?>>Kelas VII-A (7A)</option>
+                                <option value="VII-B" <?= $raport_kelas === 'VII-B' ? 'selected' : '' ?>>Kelas VII-B (7B)</option>
+                                <option value="VII-C" <?= $raport_kelas === 'VII-C' ? 'selected' : '' ?>>Kelas VII-C (7C)</option>
+                            </select>
+                        </div>
+
                         <!-- Pilihan Siswa -->
                         <div class="col-md-4">
                             <label class="form-label fw-bold text-dark small">Pilih Siswa <span class="text-danger">*</span>:</label>
                             <select name="raport_siswa" class="form-select" required>
-                                <option value="">-- Pilih Nama Siswa --</option>
-                                <?php foreach ($students_list as $st): ?>
+                                <option value="">-- Pilih Nama Siswa (<?= count($raport_students_list) ?> Siswa) --</option>
+                                <?php foreach ($raport_students_list as $st): ?>
                                     <option value="<?= $st['id_siswa'] ?>" <?= $raport_siswa_id === intval($st['id_siswa']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($st['nama_siswa']) ?> (NIS: <?= htmlspecialchars($st['nis']) ?> - Kelas: <?= htmlspecialchars($st['kelas']) ?>)
+                                        <?= htmlspecialchars($st['nama_siswa']) ?> (<?= htmlspecialchars($st['kelas']) ?> - NIS: <?= htmlspecialchars($st['nis']) ?>)
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
 
                         <!-- Tipe Periode -->
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold text-dark small">Tipe Periode Laporan:</label>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold text-dark small">Tipe Periode:</label>
                             <select name="raport_tipe" id="raportTipeSelect" class="form-select" onchange="togglePeriodeInputs()">
-                                <option value="bulanan" <?= $raport_tipe === 'bulanan' ? 'selected' : '' ?>>Bulanan (Satu Bulan Penuh)</option>
-                                <option value="mingguan" <?= $raport_tipe === 'mingguan' ? 'selected' : '' ?>>Mingguan (Rentang Tanggal)</option>
-                                <option value="semua" <?= $raport_tipe === 'semua' ? 'selected' : '' ?>>Seluruh Riwayat (Semua Kuis)</option>
+                                <option value="bulanan" <?= $raport_tipe === 'bulanan' ? 'selected' : '' ?>>Bulanan</option>
+                                <option value="mingguan" <?= $raport_tipe === 'mingguan' ? 'selected' : '' ?>>Mingguan</option>
+                                <option value="semua" <?= $raport_tipe === 'semua' ? 'selected' : '' ?>>Semua Waktu</option>
                             </select>
                         </div>
 
@@ -617,9 +954,9 @@ if ($raport_siswa_id > 0) {
                         </div>
 
                         <!-- Tombol Tampilkan -->
-                        <div class="col-md-2">
-                            <button type="submit" class="btn btn-primary fw-bold w-100 py-2">
-                                <i class="bi bi-eye-fill me-1"></i> Tampilkan
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-primary fw-bold w-100 py-2" title="Tampilkan Pratinjau">
+                                <i class="bi bi-eye-fill"></i>
                             </button>
                         </div>
                     </form>
@@ -640,7 +977,6 @@ if ($raport_siswa_id > 0) {
                                 <h3 class="h4 fw-bold text-white mb-1"><?= htmlspecialchars($raport_siswa['nama_siswa']) ?></h3>
                                 <div class="text-light opacity-75 small">
                                     NIS: <strong><?= htmlspecialchars($raport_siswa['nis']) ?></strong> &bull; 
-                                    NISN: <strong><?= htmlspecialchars($raport_siswa['nisn'] ?? '-') ?></strong> &bull; 
                                     Kelas: <strong><?= htmlspecialchars($raport_siswa['kelas']) ?></strong> &bull; 
                                     SMP Swasta Nommensen
                                 </div>
@@ -710,11 +1046,11 @@ if ($raport_siswa_id > 0) {
                                         <tr>
                                             <th class="py-2 px-3 text-center" style="width: 50px;">No</th>
                                             <th class="py-2 px-3">Materi / Kuis</th>
-                                            <th class="py-2 px-3 text-center" style="width: 100px;">KKM</th>
-                                            <th class="py-2 px-3 text-center" style="width: 100px;">Skor</th>
-                                            <th class="py-2 px-3 text-center" style="width: 120px;">Predikat</th>
-                                            <th class="py-2 px-3 text-center" style="width: 150px;">Keterangan</th>
-                                            <th class="py-2 px-3 text-end" style="width: 180px;">Waktu Pengerjaan</th>
+                                            <th class="py-2 px-3 text-center" style="width: 90px;">KKM</th>
+                                            <th class="py-2 px-3 text-center" style="width: 90px;">Skor</th>
+                                            <th class="py-2 px-3 text-center" style="width: 100px;">Predikat</th>
+                                            <th class="py-2 px-3 text-center" style="width: 120px;">Keterangan</th>
+                                            <th class="py-2 px-3" style="width: 220px;">Tanggal &amp; Jam Pengerjaan</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -751,8 +1087,16 @@ if ($raport_siswa_id > 0) {
                                                             <span class="badge bg-danger-subtle text-danger px-2 py-1 rounded-pill">Remedial</span>
                                                         <?php endif; ?>
                                                     </td>
-                                                    <td class="text-end text-muted small">
-                                                        <?= date('d/m/Y H:i', strtotime($kr['waktu_selesai'])) ?> WIB
+                                                    <!-- TANGGAL & JAM PENGERJAAN LENGKAP -->
+                                                    <td class="py-2 px-3">
+                                                        <div class="fw-semibold text-dark">
+                                                            <i class="bi bi-calendar-event text-primary me-1"></i>
+                                                            <?= date('d M Y', strtotime($kr['waktu_selesai'])) ?>
+                                                        </div>
+                                                        <div class="small text-muted">
+                                                            <i class="bi bi-clock me-1"></i>
+                                                            Pukul <?= date('H:i:s', strtotime($kr['waktu_selesai'])) ?> WIB
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
@@ -765,7 +1109,7 @@ if ($raport_siswa_id > 0) {
                             <div class="alert alert-info d-flex align-items-center gap-3 mb-0" role="alert">
                                 <i class="bi bi-info-circle-fill fs-3 text-primary flex-shrink-0"></i>
                                 <div class="small">
-                                    <strong>Panduan Generate PDF Raport:</strong> Klik tombol <strong>"Cetak Raport PDF"</strong> berwarna kuning di atas. Sistem akan membuka dokumen resmi A4 berstandar SMP Swasta Nommensen yang langsung mengaktifkan dialog print browser. Pada dialog cetak, pilih tujuan <em>"Save as PDF"</em> (Simpan sebagai PDF) untuk mengunduh raport.
+                                    <strong>Panduan Cetak Raport Resmi:</strong> Klik tombol <strong>"Cetak Raport PDF"</strong> di atas untuk membuka lembar raport standar A4 yang dilengkapi Kop Surat resmi SMP Swasta Nommensen, identitas siswa, rincian tanggal &amp; jam ujian, serta tanda tangan guru &amp; kepala sekolah.
                                 </div>
                             </div>
                         </div>
@@ -777,9 +1121,9 @@ if ($raport_siswa_id > 0) {
                             <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex p-3 mb-3">
                                 <i class="bi bi-person-lines-fill fs-1"></i>
                             </div>
-                            <h4 class="fw-bold text-dark">Pilih Siswa &amp; Periode Raport</h4>
+                            <h4 class="fw-bold text-dark">Pilih Kelas, Siswa &amp; Periode Raport</h4>
                             <p class="text-muted mx-auto" style="max-width: 500px;">
-                                Silakan tentukan nama siswa dan jenis periode (Mingguan / Bulanan / Semua Riwayat) pada formulir di atas, lalu klik tombol <strong>Tampilkan</strong> untuk melihat pratinjau nilai dan mencetak raport PDF resmi.
+                                Silakan pilih kelas (7A, 7B, 7C), nama siswa, dan tipe periode (Mingguan / Bulanan / Semua Riwayat) pada formulir di atas untuk melihat pratinjau nilai dan mencetak raport PDF resmi.
                             </p>
                         </div>
                     </div>

@@ -3,7 +3,8 @@
  * File: index.php
  * Deskripsi: Halaman Utama Aplikasi Pembelajaran Bahasa Inggris (SMP Swasta Nommensen).
  *            Menampilkan portal masuk siswa/guru dan Papan Peringkat (Leaderboard)
- *            nilai kuis tertinggi secara real-time.
+ *            nilai kuis tertinggi secara real-time dengan pemisahan Kelas 7A, 7B, 7C
+ *            serta tanggal & jam pengerjaan kuis.
  */
 
 require_once 'config.php';
@@ -12,17 +13,31 @@ require_once 'config.php';
 $logo_path = 'assets/img/logo.png';
 $has_logo = file_exists($logo_path);
 
+// Filter per rombel / kelas 7
+$filter_kelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
+if (!in_array($filter_kelas, ['VII-A', 'VII-B', 'VII-C'])) {
+    $filter_kelas = '';
+}
+
 // Query data perankingan: Siswa dengan nilai kuis tertinggi
 $leaderboard = [];
 try {
-    $stmt_lead = $pdo->query("
+    $sql_lead = "
         SELECT h.*, s.nama_siswa, s.nis, s.kelas, k.judul_kuis, k.kategori_materi
         FROM tb_hasil h
         JOIN tb_siswa s ON h.id_siswa = s.id_siswa
         JOIN tb_kuis k ON h.id_kuis = k.id_kuis
-        ORDER BY h.skor DESC, h.jumlah_benar DESC, h.waktu_selesai ASC
-        LIMIT 10
-    ");
+        WHERE s.kelas LIKE 'VII-%'
+    ";
+    $p_lead = [];
+    if (!empty($filter_kelas)) {
+        $sql_lead .= " AND s.kelas = :kelas";
+        $p_lead['kelas'] = $filter_kelas;
+    }
+    $sql_lead .= " ORDER BY h.skor DESC, h.jumlah_benar DESC, h.waktu_selesai ASC LIMIT 10";
+
+    $stmt_lead = $pdo->prepare($sql_lead);
+    $stmt_lead->execute($p_lead);
     $leaderboard = $stmt_lead->fetchAll();
 } catch (PDOException $e) {
     $leaderboard = [];
@@ -31,7 +46,7 @@ try {
 // Hitung total kuis dikerjakan
 $total_kuis_dikerjakan = 0;
 try {
-    $total_kuis_dikerjakan = $pdo->query("SELECT COUNT(*) FROM tb_hasil")->fetchColumn();
+    $total_kuis_dikerjakan = $pdo->query("SELECT COUNT(*) FROM tb_hasil h JOIN tb_siswa s ON h.id_siswa = s.id_siswa WHERE s.kelas LIKE 'VII-%'")->fetchColumn();
 } catch (PDOException $e) {
     $total_kuis_dikerjakan = 0;
 }
@@ -48,7 +63,7 @@ try {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Memanggil Bootstrap 5.3.3 & Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     <!-- Memanggil CSS utama kustom -->
@@ -58,16 +73,14 @@ try {
         .leaderboard-card {
             border: 1px solid #e2e8f0;
             border-radius: 20px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
             background: #ffffff;
-            overflow: hidden;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
         }
 
         .podium-box {
+            border-radius: 14px;
+            padding: 1rem 0.75rem;
             text-align: center;
-            padding: 1.25rem 0.75rem;
-            border-radius: 16px;
-            position: relative;
             transition: transform 0.2s ease;
         }
 
@@ -76,57 +89,52 @@ try {
         }
 
         .podium-1 {
-            background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%);
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
             border: 2px solid #f59e0b;
         }
 
         .podium-2 {
-            background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
             border: 2px solid #94a3b8;
         }
 
         .podium-3 {
-            background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
+            background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
             border: 2px solid #f97316;
         }
 
         .rank-badge {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%;
             font-weight: 800;
             font-size: 0.85rem;
         }
 
-        .rank-1 { background-color: #f59e0b; color: #ffffff; }
-        .rank-2 { background-color: #94a3b8; color: #ffffff; }
-        .rank-3 { background-color: #d97706; color: #ffffff; }
-        .rank-other { background-color: #f1f5f9; color: #475569; }
-
-        .score-pill {
-            font-family: 'Outfit', sans-serif;
-            font-weight: 800;
-            font-size: 1.05rem;
-            padding: 0.35rem 0.85rem;
-            border-radius: 20px;
-        }
+        .rank-1 { background-color: #fef08a; color: #854d0e; }
+        .rank-2 { background-color: #e2e8f0; color: #334155; }
+        .rank-3 { background-color: #ffedd5; color: #9a3412; }
+        .rank-other { background-color: #f1f5f9; color: #64748b; }
     </style>
 </head>
-<body class="d-flex flex-column min-vh-100 bg-light">
+<body class="index-body">
 
-    <!-- Header Atas (Sesuai Storyboard & Bootstrap 5) -->
-    <header class="top-header text-center text-white py-3 shadow-sm">
-        <span class="fs-5 fw-bold tracking-wide">Aplikasi Pembelajaran Bahasa Inggris &bull; SMP Swasta Nommensen</span>
-    </header>
+    <!-- Navigasi Bar Atas Sederhana -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark py-2">
+        <div class="container-fluid px-4 d-flex justify-content-between">
+            <span class="navbar-brand mb-0 h1 fs-6 fw-bold">SMP SWASTA NOMMENSEN &bull; PORTAL KELAS VII</span>
+            <span class="text-white-50 small d-none d-md-inline">Media Instruksional Mandiri Berbasis Multimedia</span>
+        </div>
+    </nav>
 
-    <!-- Konten Utama Tengah -->
-    <main class="container my-auto py-5">
-        <div class="row g-4 align-items-stretch">
+    <!-- Kontainer Pembungkus Layar Penuh -->
+    <main class="container-fluid px-3 px-md-5 py-4 d-flex align-items-center" style="min-height: calc(100vh - 105px);">
+        <div class="row g-4 w-100 mx-auto align-items-stretch justify-content-center">
             
-            <!-- Kolom Kiri: Kartu Portal Masuk (Login Siswa & Guru) -->
+            <!-- Kolom Kiri: Sambutan & Akses Masuk Portal -->
             <div class="col-12 col-lg-5 d-flex">
                 <div class="card border-0 shadow-lg rounded-4 p-4 p-md-5 text-center bg-white w-100 d-flex flex-column justify-content-center">
                     
@@ -144,15 +152,15 @@ try {
                         Aplikasi Pembelajaran
                     </h1>
                     <p class="text-primary fw-bold fs-5 mb-1" style="font-family: 'Outfit', sans-serif;">
-                        Bahasa Inggris Multimedia
+                        Bahasa Inggris Multimedia (Kelas VII)
                     </p>
-                    <p class="school-text text-secondary fw-semibold small mb-4">SMP Swasta Nommensen</p>
+                    <p class="school-text text-secondary fw-semibold small mb-4">SMP Swasta Nommensen Medan</p>
 
                     <!-- Tombol Aksi Masuk -->
                     <div class="d-grid gap-3 col-12 mx-auto mb-3">
                         <a href="siswa/login.php" class="btn btn-primary btn-lg rounded-3 fw-bold py-3 shadow-sm d-flex align-items-center justify-content-center gap-2" id="btn-siswa">
                             <i class="bi bi-mortarboard-fill fs-5"></i>
-                            <span>Mulai Belajar (Siswa)</span>
+                            <span>Mulai Belajar (Siswa Kelas 7)</span>
                         </a>
                         <a href="admin/login.php" class="btn btn-outline-secondary btn-lg rounded-3 fw-semibold py-3 d-flex align-items-center justify-content-center gap-2" id="btn-guru">
                             <i class="bi bi-person-gear fs-5"></i>
@@ -161,7 +169,7 @@ try {
                     </div>
 
                     <div class="text-muted small">
-                        <i class="bi bi-info-circle me-1"></i>Kurikulum 20 Bab &bull; Laboratorium Audio & Video
+                        <i class="bi bi-info-circle me-1"></i>Materi Rombel Kelas VII-A, VII-B, dan VII-C &bull; Kurikulum 20 Bab
                     </div>
                 </div>
             </div>
@@ -171,13 +179,13 @@ try {
                 <div class="leaderboard-card w-100 p-4 d-flex flex-column">
                     
                     <!-- Header Leaderboard -->
-                    <div class="d-flex justify-content-between align-items-center pb-3 mb-3 border-bottom">
+                    <div class="d-flex justify-content-between align-items-center pb-2 mb-2 border-bottom">
                         <div>
                             <div class="badge bg-warning-subtle text-warning-emphasis rounded-pill px-3 py-1 fw-bold mb-1">
-                                <i class="bi bi-trophy-fill me-1 text-warning"></i>HALL OF FAME
+                                <i class="bi bi-trophy-fill me-1 text-warning"></i>LEADERBOARD KELAS 7
                             </div>
-                            <h2 class="h5 fw-bold text-dark mb-0">Papan Peringkat Kuis (Leaderboard)</h2>
-                            <span class="small text-muted">Daftar siswa dengan capaian nilai tertinggi</span>
+                            <h2 class="h5 fw-bold text-dark mb-0">Papan Peringkat Nilai Tertinggi</h2>
+                            <span class="small text-muted">Daftar siswa dengan capaian nilai kuis terbaik</span>
                         </div>
                         <div class="text-end d-none d-sm-block">
                             <span class="badge bg-primary text-white px-3 py-2 rounded-pill">
@@ -186,11 +194,27 @@ try {
                         </div>
                     </div>
 
+                    <!-- Filter Pemisahan Kelas 7A, 7B, 7C -->
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <a href="index.php" class="btn btn-sm <?= empty($filter_kelas) ? 'btn-primary' : 'btn-outline-secondary' ?> rounded-pill px-3 fw-bold">
+                            Semua Kelas 7
+                        </a>
+                        <a href="index.php?kelas=VII-A" class="btn btn-sm <?= $filter_kelas === 'VII-A' ? 'btn-warning text-dark' : 'btn-outline-secondary' ?> rounded-pill px-3 fw-bold">
+                            Kelas VII-A (7A)
+                        </a>
+                        <a href="index.php?kelas=VII-B" class="btn btn-sm <?= $filter_kelas === 'VII-B' ? 'btn-info text-dark' : 'btn-outline-secondary' ?> rounded-pill px-3 fw-bold">
+                            Kelas VII-B (7B)
+                        </a>
+                        <a href="index.php?kelas=VII-C" class="btn btn-sm <?= $filter_kelas === 'VII-C' ? 'btn-success text-white' : 'btn-outline-secondary' ?> rounded-pill px-3 fw-bold">
+                            Kelas VII-C (7C)
+                        </a>
+                    </div>
+
                     <?php if (empty($leaderboard)): ?>
                         <!-- Jika Belum Ada Siswa yang Mengerjakan Kuis -->
                         <div class="text-center py-5 my-auto text-muted">
                             <i class="bi bi-award fs-1 text-secondary opacity-50 mb-2 d-block"></i>
-                            <h3 class="h6 fw-bold text-dark">Belum Ada Riwayat Kuis</h3>
+                            <h3 class="h6 fw-bold text-dark">Belum Ada Riwayat Kuis <?= !empty($filter_kelas) ? "di Kelas $filter_kelas" : "" ?></h3>
                             <p class="small text-muted mb-0">Jadilah siswa pertama yang mengerjakan kuis dan memimpin papan peringkat!</p>
                         </div>
                     <?php else: ?>
@@ -271,10 +295,10 @@ try {
                             <table class="table table-hover align-middle mb-0 small">
                                 <thead class="table-light sticky-top">
                                     <tr>
-                                        <th style="width: 12%; text-align: center;">Rank</th>
-                                        <th style="width: 40%;">Nama Siswa</th>
-                                        <th style="width: 28%;">Kuis</th>
-                                        <th style="width: 20%; text-align: center;">Skor</th>
+                                        <th style="width: 10%; text-align: center;">Rank</th>
+                                        <th style="width: 38%;">Nama Siswa</th>
+                                        <th style="width: 27%;">Kuis &amp; Waktu</th>
+                                        <th style="width: 25%; text-align: center;">Skor</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -293,15 +317,16 @@ try {
                                                     <?= htmlspecialchars($row['nama_siswa']) ?>
                                                 </div>
                                                 <div class="text-muted" style="font-size: 0.75rem;">
-                                                    NIS: <?= htmlspecialchars($row['nis']) ?> &bull; Kelas: <?= htmlspecialchars($row['kelas']) ?>
+                                                    NIS: <?= htmlspecialchars($row['nis']) ?> &bull; 
+                                                    <span class="badge bg-light text-dark border"><?= htmlspecialchars($row['kelas']) ?></span>
                                                 </div>
                                             </td>
                                             <td>
-                                                <div class="text-truncate" style="max-width: 160px;" title="<?= htmlspecialchars($row['judul_kuis']) ?>">
-                                                    <span class="badge bg-light text-secondary border"><?= htmlspecialchars($row['kategori_materi']) ?></span>
+                                                <div class="text-truncate fw-semibold text-primary" style="max-width: 160px;" title="<?= htmlspecialchars($row['judul_kuis']) ?>">
+                                                    <?= htmlspecialchars($row['judul_kuis']) ?>
                                                 </div>
                                                 <span class="text-muted" style="font-size: 0.72rem;">
-                                                    <?= date('d M Y', strtotime($row['waktu_selesai'])) ?>
+                                                    <i class="bi bi-clock me-1"></i><?= date('d M Y - H:i', strtotime($row['waktu_selesai'])) ?> WIB
                                                 </span>
                                             </td>
                                             <td style="text-align: center;">
@@ -329,6 +354,6 @@ try {
     </footer>
 
     <!-- Bootstrap 5.3.3 JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -11,11 +11,15 @@ require_once '../config.php';
 
 // 1. Menghitung Statistik Ringkas
 try {
-    $total_siswa = $pdo->query("SELECT COUNT(*) FROM tb_siswa")->fetchColumn();
+    $total_siswa = $pdo->query("SELECT COUNT(*) FROM tb_siswa WHERE kelas LIKE 'VII-%'")->fetchColumn();
+    $count_7a = $pdo->query("SELECT COUNT(*) FROM tb_siswa WHERE kelas = 'VII-A'")->fetchColumn();
+    $count_7b = $pdo->query("SELECT COUNT(*) FROM tb_siswa WHERE kelas = 'VII-B'")->fetchColumn();
+    $count_7c = $pdo->query("SELECT COUNT(*) FROM tb_siswa WHERE kelas = 'VII-C'")->fetchColumn();
+
     $total_materi = $pdo->query("SELECT COUNT(*) FROM tb_materi")->fetchColumn();
     $total_kuis = $pdo->query("SELECT COUNT(*) FROM tb_kuis")->fetchColumn();
     
-    $avg_score_raw = $pdo->query("SELECT AVG(skor) FROM tb_hasil")->fetchColumn();
+    $avg_score_raw = $pdo->query("SELECT AVG(h.skor) FROM tb_hasil h JOIN tb_siswa s ON h.id_siswa = s.id_siswa WHERE s.kelas LIKE 'VII-%'")->fetchColumn();
     $rata_rata_nilai = $avg_score_raw !== null ? round($avg_score_raw, 1) : 0;
 
     // 1.1 Top Leaderboard Siswa
@@ -24,6 +28,7 @@ try {
         FROM tb_hasil h
         JOIN tb_siswa s ON h.id_siswa = s.id_siswa
         JOIN tb_kuis k ON h.id_kuis = k.id_kuis
+        WHERE s.kelas LIKE 'VII-%'
         ORDER BY h.skor DESC, h.jumlah_benar DESC, h.waktu_selesai ASC
         LIMIT 5
     ");
@@ -317,10 +322,13 @@ try {
                 <div class="col">
                     <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-secondary small fw-bold">Total Siswa</span>
+                            <span class="text-secondary small fw-bold">Siswa Kelas 7</span>
                             <div class="badge bg-primary-subtle text-primary p-2 rounded-circle"><i class="bi bi-people-fill fs-5"></i></div>
                         </div>
-                        <div class="fs-3 fw-bold text-dark"><?= $total_siswa ?> <span class="fs-6 text-muted fw-normal">Orang</span></div>
+                        <div class="fs-3 fw-bold text-dark"><?= $total_siswa ?> <span class="fs-6 text-muted fw-normal">Siswa</span></div>
+                        <div class="small text-muted mt-1" style="font-size: 0.75rem;">
+                            7A: <strong><?= $count_7a ?></strong> &bull; 7B: <strong><?= $count_7b ?></strong> &bull; 7C: <strong><?= $count_7c ?></strong>
+                        </div>
                     </div>
                 </div>
 

@@ -59,6 +59,7 @@ try {
         FROM tb_hasil h
         JOIN tb_siswa s ON h.id_siswa = s.id_siswa
         JOIN tb_kuis k ON h.id_kuis = k.id_kuis
+        WHERE s.kelas LIKE 'VII-%'
         ORDER BY h.skor DESC, h.jumlah_benar DESC, h.waktu_selesai ASC
         LIMIT 5
     ");

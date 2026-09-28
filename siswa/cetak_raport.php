@@ -503,11 +503,11 @@ $has_logo = file_exists($logo_path);
                 <tr>
                     <th style="width: 6%;">No</th>
                     <th style="width: 42%;">Materi Pembelajaran / Judul Kuis</th>
-                    <th style="width: 18%;">Tanggal Ujian</th>
-                    <th style="width: 10%;">Benar</th>
-                    <th style="width: 10%;">Salah</th>
-                    <th style="width: 14%;">Skor (0-100)</th>
-                    <th style="width: 14%;">Status KKM</th>
+                    <th style="width: 22%;">Tanggal &amp; Jam Pengerjaan</th>
+                    <th style="width: 9%;">Benar</th>
+                    <th style="width: 9%;">Salah</th>
+                    <th style="width: 13%;">Skor (0-100)</th>
+                    <th style="width: 13%;">Status KKM</th>
                 </tr>
             </thead>
             <tbody>
@@ -528,8 +528,9 @@ $has_logo = file_exists($logo_path);
                                 <strong><?= htmlspecialchars($row['judul_kuis']) ?></strong>
                                 <div style="font-size: 8.5pt; color: #475569;"><?= htmlspecialchars($row['kategori_materi']) ?></div>
                             </td>
-                            <td class="text-center">
-                                <?= date('d/m/Y - H:i', strtotime($row['waktu_selesai'])) ?>
+                            <td class="text-center" style="font-size: 9pt;">
+                                <strong><?= date('d/m/Y', strtotime($row['waktu_selesai'])) ?></strong>
+                                <br><span style="color:#64748b; font-size: 8.5pt;">Pukul <?= date('H:i:s', strtotime($row['waktu_selesai'])) ?> WIB</span>
                             </td>
                             <td class="text-center" style="color: #16a34a; font-weight:700;"><?= $row['jumlah_benar'] ?></td>
                             <td class="text-center" style="color: #dc2626; font-weight:700;"><?= $row['jumlah_salah'] ?></td>

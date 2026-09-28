@@ -128,11 +128,22 @@ function format_elapsed_time($sec) {
                     <strong class="text-danger"><?= $jumlah_salah ?> Soal</strong>
                 </div>
 
-                <div class="d-flex justify-content-between py-2 small">
-                    <span class="text-muted"><i class="bi bi-clock-history me-2"></i>Waktu Pengerjaan:</span>
+                <div class="d-flex justify-content-between py-2 border-bottom small">
+                    <span class="text-muted"><i class="bi bi-clock-history me-2"></i>Durasi Pengerjaan:</span>
                     <strong class="text-dark"><?= format_elapsed_time($elapsed_time_sec) ?></strong>
                 </div>
+
+                <div class="d-flex justify-content-between py-2 small">
+                    <span class="text-muted"><i class="bi bi-calendar-event-fill text-primary me-2"></i>Tanggal &amp; Jam Pengerjaan:</span>
+                    <strong class="text-dark"><?= date('d M Y - H:i:s') ?> WIB <span class="badge bg-success-subtle text-success ms-1">Hari Ini</span></strong>
+                </div>
             </div>
+
+            <!-- Tombol Lihat Raport -->
+            <a href="riwayat.php" class="btn btn-warning w-100 rounded-3 fw-bold py-2 shadow-sm d-flex align-items-center justify-content-center gap-2 mb-3 text-dark">
+                <i class="bi bi-file-earmark-pdf-fill text-danger"></i>
+                <span>Lihat Riwayat &amp; Cetak Raport Belajar (PDF)</span>
+            </a>
 
             <!-- Tombol Tindakan Navigasi -->
             <div class="row g-3 mb-4">

@@ -175,7 +175,19 @@ require_once '../includes/sidebar.php';
                 </div>
             </div>
 
-            <!-- Palet Nomor Soal (Daftar Nomor Soal) -->
+            <!-- Tanggal & Jam Pengerjaan Kuis Aktif -->
+            <div class="alert alert-primary d-flex flex-wrap align-items-center justify-content-between py-2 px-3 rounded-4 mb-3 border-0 shadow-xs">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-calendar-check-fill fs-5 text-primary"></i>
+                    <div>
+                        <span class="fw-bold">Tanggal Pengerjaan Kuis:</span> Hari ini, <?= date('d M Y') ?>
+                        <span class="text-secondary small ms-2">&bull; Mulai Pukul <?= date('H:i') ?> WIB</span>
+                    </div>
+                </div>
+                <div class="small fw-semibold text-primary">
+                    <i class="bi bi-person-badge me-1"></i><?= htmlspecialchars($_SESSION['siswa_nama'] ?? 'Siswa') ?> (<?= htmlspecialchars($_SESSION['siswa_kelas'] ?? 'VII') ?>)
+                </div>
+            </div>
             <div class="card border-0 shadow-sm rounded-4 bg-white mb-3">
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">

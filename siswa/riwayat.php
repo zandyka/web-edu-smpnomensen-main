@@ -30,7 +30,10 @@ $where_clause = " WHERE h.id_siswa = :id_siswa";
 $params = ['id_siswa' => $id_siswa];
 $periode_label = "Seluruh Riwayat Pembelajaran";
 
-if ($tipe_periode === 'mingguan' && !empty($tgl_mulai) && !empty($tgl_selesai)) {
+if ($tipe_periode === 'hari_ini') {
+    $where_clause .= " AND DATE(h.waktu_selesai) = CURRENT_DATE()";
+    $periode_label = "Pengerjaan Hari Ini (" . date('d M Y') . ")";
+} elseif ($tipe_periode === 'mingguan' && !empty($tgl_mulai) && !empty($tgl_selesai)) {
     $where_clause .= " AND DATE(h.waktu_selesai) BETWEEN :start_date AND :end_date";
     $params['start_date'] = $tgl_mulai;
     $params['end_date'] = $tgl_selesai;
@@ -141,6 +144,7 @@ require_once '../includes/sidebar.php';
                     <label class="form-label fw-bold text-dark small">Pilih Periode Raport:</label>
                     <select name="tipe_periode" id="tipePeriodeSelect" class="form-select" onchange="toggleFilterInputs()">
                         <option value="semua" <?= $tipe_periode === 'semua' ? 'selected' : '' ?>>Semua Riwayat (Lengkap)</option>
+                        <option value="hari_ini" <?= $tipe_periode === 'hari_ini' ? 'selected' : '' ?>>Pengerjaan Hari Ini (<?= date('d M Y') ?>)</option>
                         <option value="bulanan" <?= $tipe_periode === 'bulanan' ? 'selected' : '' ?>>Bulanan (Satu Bulan)</option>
                         <option value="mingguan" <?= $tipe_periode === 'mingguan' ? 'selected' : '' ?>>Mingguan (Rentang Tanggal)</option>
                     </select>
@@ -346,8 +350,9 @@ require_once '../includes/sidebar.php';
                                             </span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="py-3 px-3 text-end text-muted small text-nowrap">
-                                        <?= $formatted_date ?> WIB
+                                    <td class="py-3 px-3 text-end small">
+                                        <div class="fw-semibold text-dark"><i class="bi bi-calendar-event text-primary me-1"></i><?= date('d M Y', strtotime($row['waktu_selesai'])) ?></div>
+                                        <div class="text-muted"><i class="bi bi-clock me-1"></i>Pukul <?= date('H:i:s', strtotime($row['waktu_selesai'])) ?> WIB</div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
