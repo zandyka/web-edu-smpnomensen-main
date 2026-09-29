@@ -94,11 +94,13 @@ Aplikasi akan langsung menampilkan halaman depan (*Landing Page / Splash*) yang 
 
 Aplikasi ini memiliki dua portal utama dengan hak akses terpisah:
 
-### 👨‍🏫 A. Portal Guru / Administrator
+### 👨‍🏫 A. Portal Guru / Administrator & Kepala Sekolah
 - **Tautan Login**: `http://localhost/web-edu-smpnomensen-main/admin/login.php`
-- **Nama Guru**: Hedi Diana, S.Pd., Gr
+- **Nama Guru / Kepala Sekolah**: Hedi Diana, S.Pd., Gr
 - **NUPTK / NIP (Username)**: `8546774675230253`
 - **Kata Sandi (Password)**: `guru123`
+- **Profil Sekolah**: SMP Swasta Nommensen
+- **Alamat Sekolah**: Jalan Kutacane-Medan Desa Lawe Desky Sabas , Kec. Babul Makmur, Kabupaten Aceh Tenggara, Aceh
 - **Hak Akses**: Mengelola 20 bab kurikulum materi dengan visual editor Quill, mengunggah video percakapan & audio pelafalan, meracik butir bank soal kuis & batas waktu standar KKM 70, memantau rekapitulasi laporan nilai kelas (VII-A, VII-B, VII-C), mencetak raport evaluasi resmi format PDF/A4, serta mengelola data siswa (NIS & NISN).
 
 ### 👤 B. Portal Siswa (Peserta Didik)

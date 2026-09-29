@@ -210,9 +210,9 @@ Salah satu penyempurnaan utama pada sistem ini adalah tata letak navigasi sampin
 
 ### 4.4 Engine Pencetakan Dokumen Resmi Raport (CSS Print Media & Standar A4 Sekolah)
 Sistem dilengkapi modul cetak dokumen raport resmi (`admin/cetak_raport.php` dan `siswa/cetak_raport.php`) yang dirancang tanpa ketergantungan pustaka biner berat pihak ketiga:
-- **Kop Surat Resmi Sekolah**: Dilengkapi logo resmi SMP Swasta Nommensen, alamat lengkap, dan garis ganda standar tata naskah dinas.
+- **Kop Surat Resmi Sekolah**: Dilengkapi logo resmi SMP Swasta Nommensen, alamat lengkap dinas (Jalan Kutacane-Medan Desa Lawe Desky Sabas , Kec. Babul Makmur, Kabupaten Aceh Tenggara, Aceh), dan garis ganda standar tata naskah dinas.
 - **Aturan Cetak Presisi (`@media print`)**: Mengatur ukuran kertas standar **A4**, menyembunyikan elemen navigasi tombol cetak pada lembar fisik, serta menggunakan aturan `page-break-inside: avoid` pada tabel dan kolom tanda tangan agar dokumen tidak terpotong canggung antar halaman.
-- **Legalitas Dokumen**: Memuat 3 kolom tanda tangan resmi (Kepala Sekolah, Guru Pengampu Bahasa Inggris, dan Orang Tua/Wali Siswa) beserta tanggal titimangsa dinas.
+- **Legalitas Dokumen**: Memuat 3 kolom tanda tangan resmi (Kepala Sekolah & Guru Pengampu Bahasa Inggris: Hedi Diana, S.Pd., Gr [NUPTK: 8546774675230253], dan Orang Tua/Wali Siswa) beserta tanggal titimangsa dinas (Aceh Tenggara).
 
 ### 4.5 Dual-Identity Authentication Engine
 Sistem login peserta didik (`siswa/login.php`) dirancang dengan mekanisme pencarian ganda (*dual-identifier lookup*):
@@ -414,11 +414,11 @@ Aplikasi pembelajaran ini mengintegrasikan seluruh instrumen pedagogis kurikulum
 - **Lokasi Berkas**: `siswa/cetak_raport.php`
 - **Mekanisme**: Siswa dapat mengunduh atau mencetak secara mandiri lembar raport evaluasi belajar berstandar resmi:
   - Menggunakan format layout cetak presisi A4 berbasis stylesheet `@media print`.
-  - Memuat Kop Surat Resmi SMP Swasta Nommensen lengkap dengan logo, alamat, dan nomor telepon sekolah.
+  - Memuat Kop Surat Resmi SMP Swasta Nommensen lengkap dengan logo dan alamat sekolah (Jalan Kutacane-Medan Desa Lawe Desky Sabas , Kec. Babul Makmur, Kabupaten Aceh Tenggara, Aceh).
   - Memuat identitas resmi peserta didik (Nama, NIS, NISN, Rombel Kelas, Tanggal Cetak).
   - Menyajikan tabel komprehensif capaian nilai bab materi, jumlah benar/salah, waktu pengerjaan, dan status kelulusan (KKM 70).
   - Menghitung nilai rata-rata kumulatif dan menetapkan predikat belajar (Sangat Baik / Baik / Cukup / Perlu Bimbingan).
-  - Memuat 3 kolom tanda tangan resmi: Kepala Sekolah, Guru Pengampu, dan Orang Tua/Wali Murid.
+  - Memuat 3 kolom tanda tangan resmi: Kepala Sekolah (Hedi Diana, S.Pd., Gr), Guru Pengampu (Hedi Diana, S.Pd., Gr), dan Orang Tua/Wali Murid.
 
 #### 9. Pengaturan Akun & Pembaruan Kata Sandi Mandiri
 - **Lokasi Berkas**: `siswa/ganti_password.php`

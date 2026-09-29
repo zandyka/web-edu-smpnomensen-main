@@ -452,11 +452,10 @@ $has_logo = file_exists($logo_path);
                 <div style="width: 80px; height: 80px; border: 2px solid #000; display:flex; align-items:center; justify-content:center; font-weight:800;">SMP</div>
             <?php endif; ?>
             <div class="kop-text">
-                <h4>YAYASAN UNIVERSITAS HKBP NOMMENSEN</h4>
-                <h2>SMP SWASTA NOMMENSEN MEDAN</h2>
-                <p>NSS: 204026001001 &bull; NPSN: 10210871 &bull; Status Akreditasi: A (Amat Baik)</p>
-                <p>Alamat: Jl. Sutomo No. 1, Perintis, Kec. Medan Timur, Kota Medan, Sumatera Utara 20234</p>
-                <p>Telepon: (061) 4522922 &bull; Surat Elektronik: smpnommensen@gmail.com</p>
+                <h2>SMP SWASTA NOMMENSEN</h2>
+                <p>NSS: 204026001001 &bull; NPSN: 10210871 &bull; Status Akreditasi: Terakreditasi</p>
+                <p>Alamat: Jalan Kutacane-Medan Desa Lawe Desky Sabas , Kec. Babul Makmur, Kabupaten Aceh Tenggara, Aceh</p>
+                <p>Surat Elektronik: smpnommensen@gmail.com</p>
             </div>
         </div>
 
@@ -603,19 +602,19 @@ $has_logo = file_exists($logo_path);
             </div>
 
             <div class="sig-col">
-                <div>Kota Medan, <?= date('d') ?> <?= $nama_bulan_arr[intval(date('m'))] ?> <?= date('Y') ?></div>
+                <div>Aceh Tenggara, <?= date('d') ?> <?= $nama_bulan_arr[intval(date('m'))] ?> <?= date('Y') ?></div>
                 <div>Guru Mata Pelajaran,</div>
                 <div class="sig-space"></div>
-                <div class="sig-name"><?= htmlspecialchars($_SESSION['admin_nama'] ?? 'Guru Bahasa Inggris') ?></div>
-                <div class="sig-nip">NIP/NUPTK: <?= htmlspecialchars($_SESSION['admin_nip'] ?? '-') ?></div>
+                <div class="sig-name"><?= htmlspecialchars($_SESSION['admin_nama'] ?? 'Hedi Diana, S.Pd., Gr') ?></div>
+                <div class="sig-nip">NUPTK: <?= htmlspecialchars($_SESSION['admin_nip'] ?? '8546774675230253') ?></div>
             </div>
 
             <div class="sig-col">
                 <div>Mengetahui &amp; Mengesahkan,</div>
                 <div>Kepala SMP Swasta Nommensen</div>
                 <div class="sig-space"></div>
-                <div class="sig-name">Drs. J. Siregar, M.Pd.</div>
-                <div class="sig-nip">NIP: 19740512 200212 1 003</div>
+                <div class="sig-name">Hedi Diana, S.Pd., Gr</div>
+                <div class="sig-nip">NUPTK: 8546774675230253</div>
             </div>
         </div>
 
