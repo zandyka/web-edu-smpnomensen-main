@@ -16,6 +16,14 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Current Database: `db_smp_nomensen_english`
+--
+
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `db_smp_nomensen_english` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
+
+USE `db_smp_nomensen_english`;
+
+--
 -- Table structure for table `tb_audio`
 --
 
