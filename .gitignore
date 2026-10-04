@@ -23,3 +23,7 @@ Desktop.ini
 
 # Scratch scripts
 scratch/
+
+# Local guides & private documents
+panduan_deploy_hosting.md
+*.docx
