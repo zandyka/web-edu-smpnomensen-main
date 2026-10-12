@@ -1847,3 +1847,64 @@ img, video {
     background-color: #f8fafc;
 }
 
+/* ==========================================================================
+   Leaderboard & Podium Styles
+   ========================================================================== */
+.podium-box {
+    border-radius: 12px;
+    padding: 0.75rem 0.6rem;
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.podium-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.podium-1 {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 2px solid #f59e0b;
+}
+
+.podium-2 {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    border: 2px solid #94a3b8;
+}
+
+.podium-3 {
+    background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+    border: 2px solid #f97316;
+}
+
+.rank-badge {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.85rem;
+}
+
+.rank-1 { background-color: #fef08a; color: #854d0e; }
+.rank-2 { background-color: #e2e8f0; color: #334155; }
+.rank-3 { background-color: #ffedd5; color: #9a3412; }
+.rank-other { background-color: #f1f5f9; color: #64748b; }
+
+.leaderboard-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+.leaderboard-scroll::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+.leaderboard-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+.leaderboard-scroll::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+

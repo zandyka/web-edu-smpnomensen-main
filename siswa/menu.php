@@ -52,20 +52,45 @@ $student_stats = $stmt_stats->fetch();
 $total_kuis_selesai = $student_stats['total_kuis_selesai'] ?? 0;
 $rata_rata_skor = $student_stats['rata_rata_skor'] !== null ? round($student_stats['rata_rata_skor'], 1) : 0;
 
-// 4. Query Leaderboard Top 5 Siswa
+// 4. Query Leaderboard Siswa dengan nilai kuis tertinggi dan filter kelas
+$filter_kelas = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
+if (!in_array($filter_kelas, ['VII-A', 'VII-B', 'VII-C'])) {
+    $filter_kelas = '';
+}
+
+$leaderboard = [];
 try {
-    $stmt_lead = $pdo->query("
-        SELECT h.*, s.nama_siswa, s.nis, s.kelas, k.judul_kuis
+    $sql_lead = "
+        SELECT h.*, s.nama_siswa, s.nis, s.kelas, k.judul_kuis, k.kategori_materi
         FROM tb_hasil h
         JOIN tb_siswa s ON h.id_siswa = s.id_siswa
         JOIN tb_kuis k ON h.id_kuis = k.id_kuis
         WHERE s.kelas LIKE 'VII-%'
-        ORDER BY h.skor DESC, h.jumlah_benar DESC, h.waktu_selesai ASC
-        LIMIT 5
-    ");
-    $top_leaderboard = $stmt_lead->fetchAll();
+    ";
+    $p_lead = [];
+    if (!empty($filter_kelas)) {
+        $sql_lead .= " AND s.kelas = :kelas";
+        $p_lead['kelas'] = $filter_kelas;
+    }
+    $sql_lead .= " ORDER BY h.skor DESC, h.jumlah_benar DESC, h.waktu_selesai ASC LIMIT 10";
+
+    $stmt_lead = $pdo->prepare($sql_lead);
+    $stmt_lead->execute($p_lead);
+    $leaderboard = $stmt_lead->fetchAll();
 } catch (PDOException $e) {
-    $top_leaderboard = [];
+    $leaderboard = [];
+}
+
+// Hitung total kuis dikerjakan
+$total_kuis_dikerjakan = 0;
+try {
+    $sql_count = "SELECT COUNT(*) FROM tb_hasil h JOIN tb_siswa s ON h.id_siswa = s.id_siswa WHERE s.kelas LIKE 'VII-%'";
+    if (!empty($filter_kelas)) {
+        $sql_count .= " AND s.kelas = " . $pdo->quote($filter_kelas);
+    }
+    $total_kuis_dikerjakan = $pdo->query($sql_count)->fetchColumn();
+} catch (PDOException $e) {
+    $total_kuis_dikerjakan = 0;
 }
 
 $page_title = 'Beranda Belajar Siswa';
@@ -169,77 +194,193 @@ require_once '../includes/sidebar.php';
             </div>
         </div>
 
-        <?php if (!empty($top_leaderboard)): ?>
         <!-- 2.1 Widget Papan Peringkat (Leaderboard) Siswa -->
-        <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden">
-            <div class="card-header bg-white border-0 py-3 px-4 d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-warning-subtle text-warning-emphasis p-2 rounded-circle">
-                        <i class="bi bi-trophy-fill fs-6 text-warning"></i>
-                    </span>
+        <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden" id="leaderboard">
+            <div class="card-body p-3 p-md-4">
+                
+                <!-- Header Leaderboard -->
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 pb-3 mb-3 border-bottom">
                     <div>
-                        <h3 class="h6 fw-bold text-dark mb-0">Papan Peringkat Kuis (Top 5 Siswa)</h3>
-                        <small class="text-muted">Nilai evaluasi kuis tertinggi di SMP Swasta Nommensen</small>
+                        <div class="badge bg-warning-subtle text-warning-emphasis rounded-pill px-3 py-1 fw-bold mb-1">
+                            <i class="bi bi-trophy-fill me-1 text-warning"></i>LEADERBOARD KELAS 7
+                        </div>
+                        <h2 class="h5 fw-bold text-dark mb-0">Papan Peringkat Nilai Tertinggi</h2>
+                        <span class="small text-muted">Daftar siswa dengan capaian nilai kuis terbaik di SMP Swasta Nommensen</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary text-white px-3 py-2 rounded-pill">
+                            <?= $total_kuis_dikerjakan ?> Sesi Selesai
+                        </span>
+                        <a href="riwayat.php" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
+                            <i class="bi bi-clock-history me-1"></i>Nilai Saya
+                        </a>
                     </div>
                 </div>
-                <a href="riwayat.php" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
-                    Lihat Nilai Saya
-                </a>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 small">
-                        <thead class="table-light">
-                            <tr>
-                                <th style="width: 10%; text-align: center;">Peringkat</th>
-                                <th style="width: 35%;">Nama Siswa</th>
-                                <th style="width: 35%;">Kuis yang Dikerjakan</th>
-                                <th style="width: 20%; text-align: center;">Skor Nilai</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($top_leaderboard as $idx => $lead): ?>
-                                <?php 
-                                $pos = $idx + 1;
-                                $medal = $pos === 1 ? '🥇 Juara 1' : ($pos === 2 ? '🥈 Juara 2' : ($pos === 3 ? '🥉 Juara 3' : '#' . $pos));
-                                $is_me = ($lead['id_siswa'] == $id_siswa);
-                                ?>
-                                <tr class="<?= $is_me ? 'table-primary-subtle fw-bold' : '' ?>">
-                                    <td style="text-align: center;">
-                                        <span class="badge <?= $pos === 1 ? 'bg-warning text-dark' : ($pos === 2 ? 'bg-secondary text-white' : ($pos === 3 ? 'bg-danger-subtle text-danger' : 'bg-light text-secondary border')) ?> rounded-pill px-2 py-1">
-                                            <?= $medal ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="fw-bold text-dark">
-                                            <?= htmlspecialchars($lead['nama_siswa']) ?>
-                                            <?php if ($is_me): ?>
-                                                <span class="badge bg-primary ms-1" style="font-size: 0.7rem;">Anda</span>
-                                            <?php endif; ?>
+
+                <!-- Filter Pemisahan Rombel: Semua, VII-A, VII-B, VII-C -->
+                <?php
+                $sem_param = ($filter_sem === 1 || $filter_sem === 2) ? '&semester=' . $filter_sem : '';
+                ?>
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <a href="menu.php?kelas=<?= $sem_param ?>#leaderboard" class="btn btn-sm <?= empty($filter_kelas) ? 'btn-primary' : 'btn-outline-secondary' ?> rounded-pill px-3 fw-bold">
+                        Semua Kelas 7
+                    </a>
+                    <a href="menu.php?kelas=VII-A<?= $sem_param ?>#leaderboard" class="btn btn-sm <?= $filter_kelas === 'VII-A' ? 'btn-warning text-dark' : 'btn-outline-secondary' ?> rounded-pill px-3 fw-bold">
+                        Kelas VII-A (7A)
+                    </a>
+                    <a href="menu.php?kelas=VII-B<?= $sem_param ?>#leaderboard" class="btn btn-sm <?= $filter_kelas === 'VII-B' ? 'btn-info text-dark' : 'btn-outline-secondary' ?> rounded-pill px-3 fw-bold">
+                        Kelas VII-B (7B)
+                    </a>
+                    <a href="menu.php?kelas=VII-C<?= $sem_param ?>#leaderboard" class="btn btn-sm <?= $filter_kelas === 'VII-C' ? 'btn-success text-white' : 'btn-outline-secondary' ?> rounded-pill px-3 fw-bold">
+                        Kelas VII-C (7C)
+                    </a>
+                </div>
+
+                <?php if (empty($leaderboard)): ?>
+                    <!-- Jika Belum Ada Siswa yang Mengerjakan Kuis -->
+                    <div class="text-center py-5 my-auto text-muted">
+                        <i class="bi bi-award fs-1 text-secondary opacity-50 mb-2 d-block"></i>
+                        <h3 class="h6 fw-bold text-dark">Belum Ada Riwayat Kuis <?= !empty($filter_kelas) ? "di Kelas $filter_kelas" : "" ?></h3>
+                        <p class="small text-muted mb-0">Jadilah siswa pertama yang mengerjakan kuis dan memimpin papan peringkat!</p>
+                    </div>
+                <?php else: ?>
+
+                    <!-- Podium Top 3 -->
+                    <div class="row g-2 mb-3">
+                        
+                        <!-- Juara 2 (Perak) -->
+                        <?php if (isset($leaderboard[1])): ?>
+                            <?php $is_me_2 = ($leaderboard[1]['id_siswa'] == $id_siswa); ?>
+                            <div class="col-4">
+                                <div class="podium-box podium-2 h-100 d-flex flex-column justify-content-between <?= $is_me_2 ? 'border-primary shadow-sm' : '' ?>">
+                                    <div>
+                                        <div class="fs-4">🥈</div>
+                                        <div class="fw-bold text-dark text-truncate small" title="<?= htmlspecialchars($leaderboard[1]['nama_siswa']) ?>">
+                                            <?= htmlspecialchars($leaderboard[1]['nama_siswa']) ?>
+                                            <?php if ($is_me_2): ?><span class="badge bg-primary ms-1" style="font-size: 0.65rem;">Anda</span><?php endif; ?>
                                         </div>
                                         <div class="text-muted" style="font-size: 0.75rem;">
-                                            Kelas <?= htmlspecialchars($lead['kelas']) ?> &bull; NIS: <?= htmlspecialchars($lead['nis']) ?>
+                                            Kelas <?= htmlspecialchars($leaderboard[1]['kelas']) ?>
                                         </div>
-                                    </td>
-                                    <td>
-                                        <div class="text-truncate" style="max-width: 260px;" title="<?= htmlspecialchars($lead['judul_kuis']) ?>">
-                                            <?= htmlspecialchars($lead['judul_kuis']) ?>
-                                        </div>
-                                        <small class="text-muted"><?= date('d M Y - H:i', strtotime($lead['waktu_selesai'])) ?> WIB</small>
-                                    </td>
-                                    <td style="text-align: center;">
-                                        <span class="badge <?= $lead['skor'] >= 70 ? 'bg-success text-white' : 'bg-primary text-white' ?> fs-6 px-3 py-1 rounded-pill">
-                                            <?= $lead['skor'] ?>
+                                    </div>
+                                    <div class="mt-2">
+                                        <span class="badge bg-secondary text-white fw-bold">
+                                            <?= $leaderboard[1]['skor'] ?> Poin
                                         </span>
-                                    </td>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- Juara 1 (Emas - Posisi Tengah Menonjol) -->
+                        <?php if (isset($leaderboard[0])): ?>
+                            <?php $is_me_1 = ($leaderboard[0]['id_siswa'] == $id_siswa); ?>
+                            <div class="col-4">
+                                <div class="podium-box podium-1 h-100 d-flex flex-column justify-content-between shadow-xs <?= $is_me_1 ? 'border-primary shadow-sm' : '' ?>">
+                                    <div>
+                                        <div class="fs-3">🥇</div>
+                                        <div class="fw-bold text-dark text-truncate" title="<?= htmlspecialchars($leaderboard[0]['nama_siswa']) ?>">
+                                            <?= htmlspecialchars($leaderboard[0]['nama_siswa']) ?>
+                                            <?php if ($is_me_1): ?><span class="badge bg-primary ms-1" style="font-size: 0.65rem;">Anda</span><?php endif; ?>
+                                        </div>
+                                        <div class="text-muted" style="font-size: 0.8rem;">
+                                            Kelas <?= htmlspecialchars($leaderboard[0]['kelas']) ?>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <span class="badge bg-warning text-dark fw-bold px-3 py-2 fs-6">
+                                            <?= $leaderboard[0]['skor'] ?> Poin
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- Juara 3 (Perunggu) -->
+                        <?php if (isset($leaderboard[2])): ?>
+                            <?php $is_me_3 = ($leaderboard[2]['id_siswa'] == $id_siswa); ?>
+                            <div class="col-4">
+                                <div class="podium-box podium-3 h-100 d-flex flex-column justify-content-between <?= $is_me_3 ? 'border-primary shadow-sm' : '' ?>">
+                                    <div>
+                                        <div class="fs-4">🥉</div>
+                                        <div class="fw-bold text-dark text-truncate small" title="<?= htmlspecialchars($leaderboard[2]['nama_siswa']) ?>">
+                                            <?= htmlspecialchars($leaderboard[2]['nama_siswa']) ?>
+                                            <?php if ($is_me_3): ?><span class="badge bg-primary ms-1" style="font-size: 0.65rem;">Anda</span><?php endif; ?>
+                                        </div>
+                                        <div class="text-muted" style="font-size: 0.75rem;">
+                                            Kelas <?= htmlspecialchars($leaderboard[2]['kelas']) ?>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <span class="badge bg-danger-subtle text-danger fw-bold">
+                                            <?= $leaderboard[2]['skor'] ?> Poin
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
+                    </div>
+
+                    <!-- Tabel Daftar Peringkat Lengkap -->
+                    <div class="table-responsive leaderboard-scroll" style="max-height: 280px; overflow-y: auto;">
+                        <table class="table table-hover align-middle mb-0 small">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th style="width: 10%; text-align: center;">Rank</th>
+                                    <th style="width: 38%;">Nama Siswa</th>
+                                    <th style="width: 27%;">Kuis &amp; Waktu</th>
+                                    <th style="width: 25%; text-align: center;">Skor</th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($leaderboard as $idx => $row): ?>
+                                    <?php 
+                                    $rank = $idx + 1;
+                                    $rank_class = $rank === 1 ? 'rank-1' : ($rank === 2 ? 'rank-2' : ($rank === 3 ? 'rank-3' : 'rank-other'));
+                                    $medal_icon = $rank === 1 ? '🥇' : ($rank === 2 ? '🥈' : ($rank === 3 ? '🥉' : '#' . $rank));
+                                    $is_me = ($row['id_siswa'] == $id_siswa);
+                                    ?>
+                                    <tr class="<?= $is_me ? 'table-primary-subtle fw-bold' : '' ?>">
+                                        <td style="text-align: center;">
+                                            <span class="rank-badge <?= $rank_class ?>"><?= $medal_icon ?></span>
+                                        </td>
+                                        <td>
+                                            <div class="fw-bold text-dark text-truncate" style="max-width: 220px;">
+                                                <?= htmlspecialchars($row['nama_siswa']) ?>
+                                                <?php if ($is_me): ?>
+                                                    <span class="badge bg-primary ms-1" style="font-size: 0.7rem;">Anda</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="text-muted" style="font-size: 0.75rem;">
+                                                NIS: <?= htmlspecialchars($row['nis']) ?> &bull; 
+                                                <span class="badge bg-light text-dark border"><?= htmlspecialchars($row['kelas']) ?></span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="text-truncate fw-semibold text-primary" style="max-width: 220px;" title="<?= htmlspecialchars($row['judul_kuis']) ?>">
+                                                <?= htmlspecialchars($row['judul_kuis']) ?>
+                                            </div>
+                                            <span class="text-muted" style="font-size: 0.72rem;">
+                                                <i class="bi bi-clock me-1"></i><?= date('d M Y - H:i', strtotime($row['waktu_selesai'])) ?> WIB
+                                            </span>
+                                        </td>
+                                        <td style="text-align: center;">
+                                            <span class="badge <?= $row['skor'] >= 70 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle' ?> fw-bold fs-6 px-3 py-1 rounded-pill">
+                                                <?= $row['skor'] ?>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                <?php endif; ?>
+
             </div>
         </div>
-        <?php endif; ?>
+
 
         <!-- 3. Fitur Utama Pembelajaran (Katalog Ringkas & Padat) -->
         <div class="mb-4">
