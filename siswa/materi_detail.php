@@ -1,7 +1,9 @@
 <?php
 /**
  * File: siswa/materi_detail.php
- * Deskripsi: Halaman pembelajaran terpadu 4 pilar (Video Animasi, Modul Teks Guru, Audio Listening, dan Kuis).
+ * Deskripsi: Halaman Khusus Modul Teks & Bacaan Materi Pembelajaran (SMP Swasta Nommensen).
+ *            Fokus pada teks bacaan terstruktur, penjelasan konsep, dan tautan langsung
+ *            ke halaman terpisah untuk Video Pembelajaran, Audio Listening, dan Kuis Evaluasi.
  */
 
 require_once '../includes/auth_siswa.php';
@@ -24,15 +26,15 @@ if (!$materi) {
     exit();
 }
 
-// Ambil video materi
-$stmt_v = $pdo->prepare("SELECT * FROM tb_video WHERE id_materi = :id LIMIT 1");
+// Cek ketersediaan video materi
+$stmt_v = $pdo->prepare("SELECT id_video FROM tb_video WHERE id_materi = :id LIMIT 1");
 $stmt_v->execute(['id' => $id_materi]);
-$video = $stmt_v->fetch();
+$has_video = (bool) $stmt_v->fetch();
 
-// Ambil audio materi
-$stmt_a = $pdo->prepare("SELECT * FROM tb_audio WHERE id_materi = :id LIMIT 1");
+// Cek ketersediaan audio materi
+$stmt_a = $pdo->prepare("SELECT id_audio FROM tb_audio WHERE id_materi = :id LIMIT 1");
 $stmt_a->execute(['id' => $id_materi]);
-$audio = $stmt_a->fetch();
+$has_audio = (bool) $stmt_a->fetch();
 
 // Ambil kuis terkait materi ini
 $stmt_k = $pdo->prepare("SELECT * FROM tb_kuis WHERE id_materi = :id LIMIT 1");
@@ -57,20 +59,47 @@ require_once '../includes/sidebar.php';
 
 <!-- Konten Utama Siswa -->
 <main class="siswa-main">
-    <header class="siswa-header">
-        <h1>Pembelajaran SMP Kelas 7</h1>
+    <header class="siswa-header d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h4 fw-bold text-dark mb-0">Modul Materi Pembelajaran</h1>
+            <div class="small text-muted">Baca dan pelajari materi teks bahasa Inggris secara mendalam</div>
+        </div>
         <div class="siswa-header-school">SMP Swasta Nommensen</div>
     </header>
 
     <div class="siswa-content container-fluid px-3 px-md-4 py-4">
-        <div class="mx-auto" style="max-width: 900px;">
+        <div class="mx-auto" style="max-width: 920px;">
             
             <!-- Breadcrumb & Header Materi -->
             <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
-                <div class="mb-3">
-                    <a href="menu.php" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-semibold">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <a href="menu.php#daftar-materi" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-semibold">
                         <i class="bi bi-arrow-left me-1"></i>Kembali ke Daftar Materi
                     </a>
+
+                    <!-- Navigasi Pintas ke Fitur Terpisah Lainnya -->
+                    <div class="d-flex flex-wrap gap-2">
+                        <?php if ($has_video): ?>
+                            <a href="video.php?id=<?= $materi['id_materi'] ?>" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold d-flex align-items-center gap-1 shadow-xs">
+                                <i class="bi bi-play-circle-fill"></i>
+                                <span>Tonton Video Bab Ini</span>
+                            </a>
+                        <?php endif; ?>
+
+                        <?php if ($has_audio): ?>
+                            <a href="audio.php?id=<?= $materi['id_materi'] ?>" class="btn btn-outline-success btn-sm rounded-pill px-3 fw-semibold d-flex align-items-center gap-1 shadow-xs">
+                                <i class="bi bi-headphones"></i>
+                                <span>Dengar Audio Bab Ini</span>
+                            </a>
+                        <?php endif; ?>
+
+                        <?php if ($kuis): ?>
+                            <a href="kuis_kerjakan.php?id_kuis=<?= $kuis['id_kuis'] ?>" class="btn btn-warning btn-sm rounded-pill px-3 fw-bold text-dark d-flex align-items-center gap-1 shadow-xs">
+                                <i class="bi bi-pencil-square"></i>
+                                <span>Kerjakan Kuis</span>
+                            </a>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
                 <div class="d-flex align-items-center gap-2 mb-2">
@@ -79,6 +108,9 @@ require_once '../includes/sidebar.php';
                     </span>
                     <span class="badge <?= $materi['semester'] == 1 ? 'bg-warning-subtle text-warning-emphasis' : 'bg-info-subtle text-info-emphasis' ?> py-2 px-3 rounded-pill fw-semibold">
                         Semester <?= htmlspecialchars($materi['semester']) ?>
+                    </span>
+                    <span class="badge bg-light text-muted border py-2 px-3 rounded-pill fw-semibold">
+                        <i class="bi bi-journal-text me-1 text-primary"></i>Modul Bacaan
                     </span>
                 </div>
 
@@ -91,55 +123,26 @@ require_once '../includes/sidebar.php';
                 <?php endif; ?>
             </div>
 
-            <!-- PILAR 1: VIDEO PEMBELAJARAN ANIMASI -->
-            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <i class="bi bi-play-btn-fill fs-3 text-danger"></i>
-                    <h2 class="h5 fw-bold text-dark mb-0">1. Video Pembelajaran Animasi</h2>
-                </div>
-
-                <?php 
-                $video_path = '';
-                $video_exists = false;
-                if ($video && !empty($video['file_video'])) {
-                    $video_path = '../assets/video/' . $video['file_video'];
-                    $video_exists = file_exists(__DIR__ . '/' . $video_path);
-                }
-                ?>
-
-                <?php if ($video_exists): ?>
-                    <div class="ratio ratio-16x9 rounded-3 overflow-hidden shadow-sm bg-dark">
-                        <video controls controlsList="nodownload" preload="metadata" class="w-100 h-100">
-                            <source src="<?= htmlspecialchars($video_path) ?>" type="video/mp4">
-                            Browser Anda tidak mendukung pemutar video HTML5.
-                        </video>
-                    </div>
-                    <?php if (!empty($video['keterangan'])): ?>
-                        <div class="alert alert-light border-0 py-2 px-3 mt-3 mb-0 small text-secondary">
-                            <i class="bi bi-info-circle me-1"></i><?= htmlspecialchars($video['keterangan']) ?>
+            <!-- MODUL TEKS & BACAAN GURU (Fokus Bacaan) -->
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 p-md-5 mb-4">
+                <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="feature-icon-box bg-primary-subtle text-primary mb-0" style="width: 42px; height: 42px; font-size: 1.25rem;">
+                            <i class="bi bi-book-half"></i>
                         </div>
-                    <?php endif; ?>
-                <?php else: ?>
-                    <div class="alert alert-light border border-dashed rounded-3 p-4 text-center text-muted mb-0">
-                        <i class="bi bi-camera-video-off fs-3 text-secondary d-block mb-1"></i>
-                        Berkas video materi sedang disiapkan oleh guru pengampu.
+                        <div>
+                            <h2 class="h5 fw-bold text-dark mb-0">Isi Modul Pembelajaran</h2>
+                            <small class="text-muted">Materi resmi mata pelajaran Bahasa Inggris Kelas 7</small>
+                        </div>
                     </div>
-                <?php endif; ?>
-            </div>
-
-            <!-- PILAR 2: TEKS MATERI & MODUL BACAAN GURU -->
-            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <i class="bi bi-book-half fs-3 text-primary"></i>
-                    <h2 class="h5 fw-bold text-dark mb-0">2. Modul Teks &amp; Materi Pembelajaran</h2>
                 </div>
 
-                <div class="p-4 bg-light rounded-4 border-0 text-dark">
+                <div class="text-dark leading-relaxed" style="font-size: 1.05rem;">
                     <?php if (!empty($materi['konten_teks'])): ?>
                         <div class="materi-html-content">
                             <?php 
                             $raw_text = trim($materi['konten_teks']);
-                            // Jika guru menulis teks biasa tanpa tag HTML sama sekali, ubah baris baru secara otomatis
+                            // Jika teks polos tanpa tag HTML, ubah newline ke <p> & <br>
                             if (strip_tags($raw_text) === $raw_text && !str_contains($raw_text, '<')) {
                                 echo '<p>' . nl2br(htmlspecialchars($raw_text)) . '</p>';
                             } else {
@@ -148,73 +151,85 @@ require_once '../includes/sidebar.php';
                             ?>
                         </div>
                     <?php else: ?>
-                        <p class="text-muted fst-italic mb-0">Modul bacaan sedang dalam proses pengisian oleh guru.</p>
+                        <div class="alert alert-light border border-dashed rounded-3 p-4 text-center text-muted mb-0">
+                            <i class="bi bi-file-earmark-text fs-3 text-secondary d-block mb-1"></i>
+                            Modul bacaan sedang dalam proses pengisian oleh guru pengampu.
+                        </div>
                     <?php endif; ?>
                 </div>
             </div>
 
-            <!-- PILAR 3: AUDIO PELAFALAN & LISTENING -->
+            <!-- CARD AKTIVITAS PENDUKUNG (Video, Audio & Kuis Terpisah) -->
             <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <i class="bi bi-volume-up-fill fs-3 text-success"></i>
-                    <h2 class="h5 fw-bold text-dark mb-0">3. Audio Pelafalan &amp; Latihan Listening</h2>
-                </div>
+                <h3 class="h6 fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                    <i class="bi bi-stars text-warning"></i>
+                    <span>Aktivitas Pendukung Bab <?= $materi['urutan'] ?></span>
+                </h3>
 
-                <?php 
-                $audio_path = '';
-                $audio_exists = false;
-                if ($audio && !empty($audio['file_audio'])) {
-                    $audio_path = '../assets/audio/' . $audio['file_audio'];
-                    $audio_exists = file_exists(__DIR__ . '/' . $audio_path);
-                }
-                ?>
-
-                <div class="card bg-light border-0 rounded-3 p-3">
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                        <div>
-                            <div class="fw-bold text-dark">
-                                <?= htmlspecialchars($audio['keterangan'] ?? 'Latihan Pelafalan (Pronunciation Audio)') ?>
+                <div class="row row-cols-1 row-cols-md-3 g-3">
+                    
+                    <!-- Kartu Video -->
+                    <div class="col">
+                        <div class="card h-100 rounded-4 border border-light-subtle bg-light p-3 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="badge bg-danger text-white rounded-pill p-1 px-2 small">
+                                        <i class="bi bi-play-circle-fill me-1"></i>Video
+                                    </span>
+                                </div>
+                                <h4 class="h6 fw-bold text-dark mb-1">Video Pembelajaran</h4>
+                                <p class="small text-muted mb-3">Tonton video animasi situasi nyata untuk Bab <?= $materi['urutan'] ?>.</p>
                             </div>
-                            <div class="small text-muted">
-                                Dengarkan rekaman audio pelafalan resmi untuk melatih kemampuan menyimak (listening).
-                            </div>
+                            <a href="video.php?id=<?= $materi['id_materi'] ?>" class="btn btn-outline-danger btn-sm rounded-3 fw-bold w-100 py-2">
+                                <i class="bi bi-play-fill me-1"></i>Tonton Video
+                            </a>
                         </div>
-
-                        <?php if ($audio_exists): ?>
-                            <audio controls controlsList="nodownload" class="flex-shrink-0">
-                                <source src="<?= htmlspecialchars($audio_path) ?>" type="audio/mpeg">
-                                Browser Anda tidak mendukung pemutar audio.
-                            </audio>
-                        <?php else: ?>
-                            <span class="badge bg-white text-muted border py-2 px-3 small">
-                                <i class="bi bi-mic-mute me-1"></i>Audio disiapkan guru
-                            </span>
-                        <?php endif; ?>
                     </div>
+
+                    <!-- Kartu Audio -->
+                    <div class="col">
+                        <div class="card h-100 rounded-4 border border-light-subtle bg-light p-3 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="badge bg-success text-white rounded-pill p-1 px-2 small">
+                                        <i class="bi bi-headphones me-1"></i>Audio
+                                    </span>
+                                </div>
+                                <h4 class="h6 fw-bold text-dark mb-1">Audio Listening</h4>
+                                <p class="small text-muted mb-3">Dengar pelafalan resmi dari penutur asli untuk Bab <?= $materi['urutan'] ?>.</p>
+                            </div>
+                            <a href="audio.php?id=<?= $materi['id_materi'] ?>" class="btn btn-outline-success btn-sm rounded-3 fw-bold w-100 py-2">
+                                <i class="bi bi-soundwave me-1"></i>Dengar Audio
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Kartu Kuis -->
+                    <div class="col">
+                        <div class="card h-100 rounded-4 border border-light-subtle bg-light p-3 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="badge bg-warning text-dark rounded-pill p-1 px-2 small fw-bold">
+                                        <i class="bi bi-patch-question-fill me-1"></i>Kuis
+                                    </span>
+                                </div>
+                                <h4 class="h6 fw-bold text-dark mb-1">Kuis Evaluasi</h4>
+                                <p class="small text-muted mb-3">Uji pemahaman materi Anda dengan kuis interaktif Bab <?= $materi['urutan'] ?>.</p>
+                            </div>
+                            <?php if ($kuis): ?>
+                                <a href="kuis_kerjakan.php?id_kuis=<?= $kuis['id_kuis'] ?>" class="btn btn-warning btn-sm rounded-3 fw-bold w-100 py-2 text-dark">
+                                    <i class="bi bi-pencil-square me-1"></i>Mulai Kuis
+                                </a>
+                            <?php else: ?>
+                                <button class="btn btn-secondary btn-sm rounded-3 fw-bold w-100 py-2" disabled>
+                                    Kuis Disiapkan
+                                </button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
                 </div>
             </div>
-
-            <!-- PILAR 4: KUIS EVALUASI PEMAHAMAN -->
-            <?php if ($kuis): ?>
-                <div class="card border-0 shadow-sm rounded-4 bg-gradient text-white p-4 mb-4" style="background-color: var(--accent-blue);">
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                        <div>
-                            <span class="badge bg-warning text-dark fw-bold mb-2">
-                                PILAR 4: EVALUASI PEMBELAJARAN
-                            </span>
-                            <h3 class="h5 fw-bold mb-1"><?= htmlspecialchars($kuis['judul_kuis']) ?></h3>
-                            <p class="small text-white-50 mb-0">
-                                Uji pemahaman materi Anda dengan kuis interaktif (Waktu: <?= htmlspecialchars($kuis['waktu_pengerjaan']) ?> Menit, KKM: <?= htmlspecialchars($kuis['nilai_lulus'] ?? 70) ?> Poin).
-                            </p>
-                        </div>
-
-                        <a href="kuis_kerjakan.php?id_kuis=<?= $kuis['id_kuis'] ?>" class="btn btn-warning btn-lg rounded-3 fw-bold py-2 px-4 shadow-sm text-dark flex-shrink-0 d-flex align-items-center gap-2">
-                            <i class="bi bi-play-fill fs-4"></i>
-                            <span>Mulai Kuis</span>
-                        </a>
-                    </div>
-                </div>
-            <?php endif; ?>
 
             <!-- Navigasi Bab Sebelumnya & Selanjutnya -->
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-2 pb-4">
@@ -235,5 +250,6 @@ require_once '../includes/sidebar.php';
 
         </div>
     </div>
+</main>
 
 <?php require_once '../includes/footer.php'; ?>

@@ -32,7 +32,7 @@ if (!$quiz) {
 
 // Ambil butir soal TANPA menyertakan jawaban_benar ke frontend untuk keamanan penuh (anti-inspect devtools)
 try {
-    $stmt_soal = $pdo->prepare("SELECT id_soal, id_kuis, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d FROM tb_soal WHERE id_kuis = :id ORDER BY id_soal ASC");
+    $stmt_soal = $pdo->prepare("SELECT id_soal, id_kuis, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, tipe_soal FROM tb_soal WHERE id_kuis = :id ORDER BY id_soal ASC");
     $stmt_soal->execute(['id' => $id_kuis]);
     $questions = $stmt_soal->fetchAll();
 } catch (PDOException $e) {
@@ -137,6 +137,65 @@ require_once '../includes/sidebar.php';
     box-shadow: 0 0 0 3px #fbbf24 !important;
     font-weight: 800;
 }
+
+/* Styling Variasi Soal (Susun Kata & Isian) */
+.word-chip {
+    display: inline-flex;
+    align-items: center;
+    background: #ffffff;
+    border: 1.5px solid #0284c7;
+    color: #0369a1;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 9999px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.word-chip:hover {
+    background: #e0f2fe;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.word-chip.selected {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0369a1;
+}
+
+.word-chip-target {
+    background: #2563eb;
+    color: #ffffff;
+    border: 1.5px solid #1d4ed8;
+}
+
+.word-chip-target:hover {
+    background: #dc2626;
+    border-color: #b91c1c;
+    color: #ffffff;
+}
+
+.sentence-target-box {
+    background-color: #f8fafc;
+    border: 2px dashed #94a3b8;
+    border-radius: 14px;
+    min-height: 70px;
+    padding: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    transition: border-color 0.2s ease;
+}
+
+.sentence-target-box.active {
+    border-color: #2563eb;
+    background-color: #eff6ff;
+}
 </style>
 
 <!-- Area Konten Utama Siswa -->
@@ -215,7 +274,9 @@ require_once '../includes/sidebar.php';
                 <div class="card-body p-4 p-md-5">
                     <div class="d-flex justify-content-between align-items-center text-muted small mb-3 pb-2 border-bottom">
                         <span id="current-badge-indicator" class="fw-bold text-primary">PERTANYAAN 1</span>
-                        <span class="fst-italic"><i class="bi bi-info-circle me-1"></i>Pilih salah satu jawaban (A, B, C, atau D)</span>
+                        <span id="type-badge-indicator" class="badge bg-primary-subtle text-primary fw-bold py-1 px-3 rounded-pill">
+                            <i class="bi bi-ui-radios me-1"></i>PILIHAN GANDA
+                        </span>
                     </div>
 
                     <h3 id="question-text" class="h5 fw-bold text-dark mb-4 leading-relaxed">
@@ -375,9 +436,13 @@ require_once '../includes/sidebar.php';
             }
         }
 
-        // 6. Tampilkan Soal Aktif (Tanpa Warna Benar/Salah)
+        // State untuk susun kata per soal
+        window.susunTokensState = window.susunTokensState || {};
+
+        // 6. Tampilkan Soal Aktif Sesuai Tipe
         function displayQuestion() {
             const currentQuestion = questions[currentIndex];
+            const qType = currentQuestion.tipe_soal || 'pilihan_ganda';
             
             // Perbarui Teks & Label Progres
             document.getElementById("current-badge-indicator").innerText = `PERTANYAAN ${currentIndex + 1} DARI ${totalQuestions}`;
@@ -388,46 +453,118 @@ require_once '../includes/sidebar.php';
             const progressPercent = ((currentIndex + 1) / totalQuestions) * 100;
             document.getElementById("progress-bar").style.width = progressPercent + '%';
 
+            // Badge Tipe Soal
+            const typeBadge = document.getElementById("type-badge-indicator");
+            if (qType === 'isian') {
+                typeBadge.className = "badge bg-warning-subtle text-warning-emphasis fw-bold py-1 px-3 rounded-pill";
+                typeBadge.innerHTML = '<i class="bi bi-pencil-square me-1"></i>ISIAN SINGKAT / ESSAY';
+            } else if (qType === 'susun_kata') {
+                typeBadge.className = "badge bg-success-subtle text-success-emphasis fw-bold py-1 px-3 rounded-pill";
+                typeBadge.innerHTML = '<i class="bi bi-puzzle me-1"></i>SUSUN KATA (WORD ARRANGE)';
+            } else if (qType === 'true_false') {
+                typeBadge.className = "badge bg-info-subtle text-info-emphasis fw-bold py-1 px-3 rounded-pill";
+                typeBadge.innerHTML = '<i class="bi bi-check2-circle me-1"></i>BENAR / SALAH (TRUE / FALSE)';
+            } else {
+                typeBadge.className = "badge bg-primary-subtle text-primary fw-bold py-1 px-3 rounded-pill";
+                typeBadge.innerHTML = '<i class="bi bi-ui-radios me-1"></i>PILIHAN GANDA';
+            }
+
             // Bersihkan Wadah Opsi
             const optionsContainer = document.getElementById("options-container");
             optionsContainer.innerHTML = '';
 
-            // Opsi Jawaban A, B, C, D
-            const opts = [
-                { key: 'A', text: currentQuestion.opsi_a },
-                { key: 'B', text: currentQuestion.opsi_b },
-                { key: 'C', text: currentQuestion.opsi_c },
-                { key: 'D', text: currentQuestion.opsi_d }
-            ];
-
             const currentAnswer = answers[currentIndex];
 
-            opts.forEach(function(opt) {
-                const card = document.createElement("div");
-                card.className = "opt-card";
-                card.id = `opt-${opt.key}`;
-
-                if (currentAnswer === opt.key) {
-                    card.classList.add("selected");
+            if (qType === 'pilihan_ganda' || qType === 'true_false') {
+                let opts = [];
+                if (qType === 'true_false') {
+                    opts = [
+                        { key: 'A', text: currentQuestion.opsi_a || 'TRUE (Benar)' },
+                        { key: 'B', text: currentQuestion.opsi_b || 'FALSE (Salah)' }
+                    ];
+                } else {
+                    opts = [
+                        { key: 'A', text: currentQuestion.opsi_a },
+                        { key: 'B', text: currentQuestion.opsi_b },
+                        { key: 'C', text: currentQuestion.opsi_c },
+                        { key: 'D', text: currentQuestion.opsi_d }
+                    ].filter(o => o.text !== null && o.text !== undefined && o.text !== '');
                 }
 
-                card.innerHTML = `
-                    <div class="d-flex align-items-center">
-                        <span class="opt-badge">${opt.key}</span>
-                        <span>${opt.text}</span>
-                    </div>
-                    <div class="opt-check">
-                        ${currentAnswer === opt.key ? '<i class="bi bi-check-circle-fill text-primary fs-5"></i>' : '<i class="bi bi-circle text-muted opacity-50 fs-5"></i>'}
+                opts.forEach(function(opt) {
+                    const card = document.createElement("div");
+                    card.className = "opt-card";
+                    card.id = `opt-${opt.key}`;
+
+                    if (currentAnswer === opt.key) {
+                        card.classList.add("selected");
+                    }
+
+                    card.innerHTML = `
+                        <div class="d-flex align-items-center">
+                            <span class="opt-badge">${opt.key}</span>
+                            <span>${opt.text}</span>
+                        </div>
+                        <div class="opt-check">
+                            ${currentAnswer === opt.key ? '<i class="bi bi-check-circle-fill text-primary fs-5"></i>' : '<i class="bi bi-circle text-muted opacity-50 fs-5"></i>'}
+                        </div>
+                    `;
+
+                    card.onclick = function() {
+                        selectOption(opt.key);
+                    };
+
+                    optionsContainer.appendChild(card);
+                });
+            } else if (qType === 'isian') {
+                const isianWrapper = document.createElement("div");
+                isianWrapper.className = "p-3 p-md-4 bg-light rounded-4 border";
+
+                let hintHtml = '';
+                if (currentQuestion.opsi_a && currentQuestion.opsi_a.trim() !== '') {
+                    hintHtml = `
+                        <div class="alert alert-primary-subtle border border-primary-subtle small text-primary-emphasis mb-3 rounded-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-lightbulb-fill text-primary fs-5"></i>
+                            <div><strong>Petunjuk:</strong> ${currentQuestion.opsi_a}</div>
+                        </div>
+                    `;
+                }
+
+                isianWrapper.innerHTML = `
+                    ${hintHtml}
+                    <label class="form-label fw-bold text-dark mb-2">
+                        <i class="bi bi-keyboard me-1 text-primary"></i>Ketik Jawaban Anda di Bawah Ini:
+                    </label>
+                    <input type="text" id="isian-input-${currentIndex}" class="form-control form-control-lg fw-semibold py-3 px-3 rounded-3 border-2 shadow-xs" placeholder="Ketik kata / frasa bahasa Inggris di sini..." value="${currentAnswer ? String(currentAnswer).replace(/"/g, '&quot;') : ''}" autocomplete="off">
+                    <div class="d-flex justify-content-between align-items-center mt-2 small text-muted">
+                        <span><i class="bi bi-info-circle me-1"></i>Jawaban tidak sensitif huruf besar/kecil (case-insensitive).</span>
+                        <span id="isian-status" class="${currentAnswer ? 'text-success fw-bold' : 'text-secondary'}">
+                            ${currentAnswer ? '<i class="bi bi-check2 me-1"></i>Tersimpan otomatis' : 'Belum diisi'}
+                        </span>
                     </div>
                 `;
 
-                // Event memilih jawaban (Dapat diubah-ubah secara fleksibel oleh siswa)
-                card.onclick = function() {
-                    selectAnswer(opt.key);
-                };
+                optionsContainer.appendChild(isianWrapper);
 
-                optionsContainer.appendChild(card);
-            });
+                const inputEl = document.getElementById(`isian-input-${currentIndex}`);
+                inputEl.addEventListener('input', function() {
+                    const val = this.value;
+                    const statusEl = document.getElementById("isian-status");
+                    if (val.trim() !== '') {
+                        answers[currentIndex] = val.trim();
+                        if (statusEl) statusEl.innerHTML = '<i class="bi bi-check2 me-1"></i>Tersimpan otomatis';
+                        if (statusEl) statusEl.className = 'text-success fw-bold';
+                    } else {
+                        delete answers[currentIndex];
+                        if (statusEl) statusEl.innerText = 'Belum diisi';
+                        if (statusEl) statusEl.className = 'text-secondary';
+                    }
+                    localStorage.setItem(storageKeyAnswers, JSON.stringify(answers));
+                    updatePalette();
+                });
+            } else if (qType === 'susun_kata') {
+                renderSusunKata(currentQuestion, optionsContainer);
+            }
 
             // Atur Navigasi Tombol
             const prevBtn = document.getElementById("prev-btn");
@@ -449,8 +586,132 @@ require_once '../includes/sidebar.php';
             updatePalette();
         }
 
-        // 7. Pilih Jawaban Siswa (Netral, Tanpa Umpan Balik Benar/Salah)
-        function selectAnswer(selectedKey) {
+        // 7. Render Interaktif Susun Kata
+        function renderSusunKata(currentQuestion, container) {
+            // Ambil token dari opsi_a
+            let rawTokens = [];
+            if (currentQuestion.opsi_a) {
+                if (currentQuestion.opsi_a.includes('/')) {
+                    rawTokens = currentQuestion.opsi_a.split('/').map(s => s.trim()).filter(s => s.length > 0);
+                } else {
+                    rawTokens = currentQuestion.opsi_a.trim().split(/\s+/).filter(s => s.length > 0);
+                }
+            }
+
+            // Inisialisasi token objects [{id: 0, text: '...'}]
+            const allTokens = rawTokens.map((text, idx) => ({ id: idx, text: text }));
+
+            // Tentukan token yang sudah terpilih
+            if (!window.susunTokensState[currentIndex]) {
+                const savedSentence = answers[currentIndex];
+                if (savedSentence) {
+                    const savedWords = savedSentence.split(/\s+/);
+                    const chosen = [];
+                    const remaining = [...allTokens];
+                    savedWords.forEach(w => {
+                        const matchIdx = remaining.findIndex(t => t.text.toLowerCase() === w.toLowerCase());
+                        if (matchIdx !== -1) {
+                            chosen.push(remaining[matchIdx]);
+                            remaining.splice(matchIdx, 1);
+                        }
+                    });
+                    window.susunTokensState[currentIndex] = chosen;
+                } else {
+                    window.susunTokensState[currentIndex] = [];
+                }
+            }
+
+            const chosenTokens = window.susunTokensState[currentIndex];
+            const chosenIds = chosenTokens.map(t => t.id);
+            const availableTokens = allTokens.filter(t => !chosenIds.includes(t.id));
+
+            const wrapper = document.createElement("div");
+            wrapper.className = "p-3 p-md-4 bg-light rounded-4 border";
+
+            wrapper.innerHTML = `
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-bold text-dark mb-0">
+                            <i class="bi bi-chat-quote-fill me-1 text-primary"></i>Susunan Kalimat Anda:
+                        </label>
+                        <button type="button" id="btn-reset-susun" class="btn btn-sm btn-outline-danger py-1 px-3 rounded-pill fw-semibold">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Susunan
+                        </button>
+                    </div>
+                    <div id="sentence-target-box" class="sentence-target-box ${chosenTokens.length > 0 ? 'active' : ''}">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label fw-bold text-secondary small mb-2">
+                        <i class="bi bi-hand-index-thumb me-1 text-primary"></i>Pilihan Kata (Klik untuk memasukkan ke kalimat):
+                    </label>
+                    <div id="tokens-pool-box" class="d-flex flex-wrap gap-2 p-3 bg-white rounded-3 border">
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(wrapper);
+
+            const sentenceBox = document.getElementById("sentence-target-box");
+            const poolBox = document.getElementById("tokens-pool-box");
+
+            // Render token dalam kotak kalimat
+            if (chosenTokens.length === 0) {
+                sentenceBox.innerHTML = '<span class="text-muted small fst-italic w-100 text-center py-2"><i class="bi bi-arrow-down-circle me-1"></i>Klik kata-kata di bawah ini untuk menyusun kalimat...</span>';
+            } else {
+                chosenTokens.forEach((token, index) => {
+                    const chip = document.createElement("span");
+                    chip.className = "word-chip word-chip-target";
+                    chip.title = "Klik untuk membatalkan/mengembalikan kata ini";
+                    chip.innerHTML = `${token.text} <i class="bi bi-x-circle ms-1 opacity-75"></i>`;
+                    chip.onclick = function() {
+                        chosenTokens.splice(index, 1);
+                        syncSusunKataAnswer(chosenTokens);
+                        displayQuestion();
+                    };
+                    sentenceBox.appendChild(chip);
+                });
+            }
+
+            // Render token dalam pool yang belum dipilih
+            if (availableTokens.length === 0) {
+                poolBox.innerHTML = '<span class="text-success small fw-semibold w-100 text-center py-1"><i class="bi bi-check2-all me-1"></i>Semua kata telah dimasukkan ke dalam kalimat!</span>';
+            } else {
+                availableTokens.forEach(token => {
+                    const chip = document.createElement("span");
+                    chip.className = "word-chip";
+                    chip.title = "Klik untuk menambahkan ke susunan kalimat";
+                    chip.innerHTML = `<i class="bi bi-plus me-1 text-primary"></i>${token.text}`;
+                    chip.onclick = function() {
+                        chosenTokens.push(token);
+                        syncSusunKataAnswer(chosenTokens);
+                        displayQuestion();
+                    };
+                    poolBox.appendChild(chip);
+                });
+            }
+
+            // Tombol Reset
+            document.getElementById("btn-reset-susun").onclick = function() {
+                window.susunTokensState[currentIndex] = [];
+                syncSusunKataAnswer([]);
+                displayQuestion();
+            };
+        }
+
+        function syncSusunKataAnswer(chosenTokens) {
+            if (chosenTokens.length > 0) {
+                answers[currentIndex] = chosenTokens.map(t => t.text).join(' ');
+            } else {
+                delete answers[currentIndex];
+            }
+            localStorage.setItem(storageKeyAnswers, JSON.stringify(answers));
+            updatePalette();
+        }
+
+        // 8. Pilih Jawaban Pilihan Ganda / True-False
+        function selectOption(selectedKey) {
             answers[currentIndex] = selectedKey;
             localStorage.setItem(storageKeyAnswers, JSON.stringify(answers));
 

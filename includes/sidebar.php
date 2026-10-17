@@ -73,6 +73,24 @@ if (empty($initials)) $initials = 'SW';
                 </a>
             </li>
             <li>
+                <a href="video.php" class="<?= $active_page === 'video' ? 'active' : '' ?>">
+                    <div class="nav-icon-box" style="color: #ef4444; background: rgba(239, 68, 68, 0.15);">
+                        <i class="bi bi-play-btn-fill"></i>
+                    </div>
+                    <span class="nav-text">Video Animasi</span>
+                    <span class="nav-pill-badge badge-red">20 Bab</span>
+                </a>
+            </li>
+            <li>
+                <a href="audio.php" class="<?= $active_page === 'audio' ? 'active' : '' ?>">
+                    <div class="nav-icon-box" style="color: #10b981; background: rgba(16, 185, 129, 0.15);">
+                        <i class="bi bi-headphones"></i>
+                    </div>
+                    <span class="nav-text">Audio Listening</span>
+                    <span class="nav-pill-badge badge-green">Lab Audio</span>
+                </a>
+            </li>
+            <li>
                 <a href="kuis.php" class="<?= $active_page === 'kuis' ? 'active' : '' ?>">
                     <div class="nav-icon-box">
                         <i class="bi bi-patch-question-fill"></i>

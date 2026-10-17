@@ -407,7 +407,7 @@ require_once '../includes/sidebar.php';
 
                 <!-- Fitur 2: Video Animasi -->
                 <div class="col">
-                    <a href="#daftar-materi" class="card feature-card h-100 bg-white rounded-4 shadow-sm p-3 text-decoration-none d-flex flex-row align-items-center gap-3">
+                    <a href="video.php" class="card feature-card h-100 bg-white rounded-4 shadow-sm p-3 text-decoration-none d-flex flex-row align-items-center gap-3">
                         <div class="feature-icon-box bg-danger-subtle text-danger mb-0">
                             <i class="bi bi-play-btn-fill"></i>
                         </div>
@@ -421,7 +421,7 @@ require_once '../includes/sidebar.php';
 
                 <!-- Fitur 3: Laboratorium Audio -->
                 <div class="col">
-                    <a href="#daftar-materi" class="card feature-card h-100 bg-white rounded-4 shadow-sm p-3 text-decoration-none d-flex flex-row align-items-center gap-3">
+                    <a href="audio.php" class="card feature-card h-100 bg-white rounded-4 shadow-sm p-3 text-decoration-none d-flex flex-row align-items-center gap-3">
                         <div class="feature-icon-box bg-success-subtle text-success mb-0">
                             <i class="bi bi-headphones"></i>
                         </div>
@@ -531,17 +531,27 @@ require_once '../includes/sidebar.php';
                                         <?= htmlspecialchars($m['judul_materi']) ?>
                                     </h3>
 
-                                    <!-- Indikator 4 Media Ikon Ringkas -->
-                                    <div class="d-flex align-items-center gap-3 text-secondary small mb-3">
-                                        <span title="Tersedia Video"><i class="bi bi-play-circle-fill text-danger me-1"></i>Video</span>
-                                        <span title="Tersedia Modul"><i class="bi bi-book-half text-primary me-1"></i>Modul</span>
-                                        <span title="Tersedia Audio"><i class="bi bi-volume-up-fill text-success me-1"></i>Audio</span>
-                                        <span title="Tersedia Kuis"><i class="bi bi-patch-question-fill text-warning me-1"></i>Kuis</span>
+                                    <!-- Indikator 4 Media Ikon Ringkas dengan Akses Terpisah -->
+                                    <div class="d-flex flex-wrap align-items-center gap-2 text-secondary small mb-3">
+                                        <a href="materi_detail.php?id=<?= $m['id_materi'] ?>" class="badge bg-primary-subtle text-primary border border-primary-subtle text-decoration-none px-2 py-1" title="Buka Modul Teks">
+                                            <i class="bi bi-book-half me-1"></i>Modul
+                                        </a>
+                                        <a href="video.php?id=<?= $m['id_materi'] ?>" class="badge bg-danger-subtle text-danger border border-danger-subtle text-decoration-none px-2 py-1" title="Tonton Video Pembelajaran">
+                                            <i class="bi bi-play-circle-fill me-1"></i>Video
+                                        </a>
+                                        <a href="audio.php?id=<?= $m['id_materi'] ?>" class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none px-2 py-1" title="Dengar Audio Listening">
+                                            <i class="bi bi-headphones me-1"></i>Audio
+                                        </a>
+                                        <?php if (!empty($m['id_kuis'])): ?>
+                                            <a href="kuis_kerjakan.php?id_kuis=<?= $m['id_kuis'] ?>" class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle text-decoration-none px-2 py-1" title="Kerjakan Kuis Evaluasi">
+                                                <i class="bi bi-patch-question-fill me-1"></i>Kuis
+                                            </a>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
 
                                 <a href="materi_detail.php?id=<?= $m['id_materi'] ?>" class="btn btn-primary w-100 rounded-3 fw-bold py-2 small shadow-sm d-flex align-items-center justify-content-center gap-2">
-                                    <span>Buka Bab</span>
+                                    <span>Buka Modul Teks</span>
                                     <i class="bi bi-arrow-right-short"></i>
                                 </a>
                             </div>

@@ -25,7 +25,7 @@ $student_answers = isset($_POST['answers']) ? json_decode($_POST['answers'], tru
 
 try {
     // Ambil semua soal untuk kuis ini dari DB untuk mencocokkan jawaban
-    $stmt = $pdo->prepare("SELECT id_soal, jawaban_benar FROM tb_soal WHERE id_kuis = :id_kuis ORDER BY id_soal ASC");
+    $stmt = $pdo->prepare("SELECT id_soal, jawaban_benar, tipe_soal FROM tb_soal WHERE id_kuis = :id_kuis ORDER BY id_soal ASC");
     $stmt->execute(['id_kuis' => $id_kuis]);
     $soal_list = $stmt->fetchAll();
     
@@ -38,12 +38,32 @@ try {
     $jumlah_benar = 0;
     $jumlah_salah = 0;
 
-    // Hitung jawaban benar & salah
+    // Hitung jawaban benar & salah berdasarkan tipe soal
     foreach ($soal_list as $index => $soal) {
-        $selected_opt = isset($student_answers[$index]) ? trim($student_answers[$index]) : '';
-        $correct_opt = trim($soal['jawaban_benar']);
+        $selected = isset($student_answers[$index]) ? trim($student_answers[$index]) : '';
+        $correct = trim($soal['jawaban_benar']);
+        $tipe = $soal['tipe_soal'] ?? 'pilihan_ganda';
 
-        if ($selected_opt === $correct_opt) {
+        $is_correct = false;
+        if ($tipe === 'isian' || $tipe === 'susun_kata') {
+            // Normalisasi: kecilkan huruf, hilangkan tanda baca dan spasi ganda
+            $clean_student = strtolower(trim(preg_replace('/[.,?!;:"\']/', '', preg_replace('/\s+/', ' ', $selected))));
+            $accepted_list = explode('|', $correct);
+            foreach ($accepted_list as $acc) {
+                $clean_acc = strtolower(trim(preg_replace('/[.,?!;:"\']/', '', preg_replace('/\s+/', ' ', trim($acc)))));
+                if ($clean_student === $clean_acc && $clean_student !== '') {
+                    $is_correct = true;
+                    break;
+                }
+            }
+        } else {
+            // Pilihan ganda atau True/False (A, B, C, D)
+            if (strtoupper($selected) === strtoupper($correct) && $selected !== '') {
+                $is_correct = true;
+            }
+        }
+
+        if ($is_correct) {
             $jumlah_benar++;
         } else {
             $jumlah_salah++;
