@@ -275,6 +275,5 @@ require_once '../includes/sidebar.php';
 
         </div>
     </div>
-</main>
 
 <?php require_once '../includes/footer.php'; ?>

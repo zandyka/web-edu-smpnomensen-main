@@ -196,6 +196,105 @@ require_once '../includes/sidebar.php';
     border-color: #2563eb;
     background-color: #eff6ff;
 }
+
+/* Styling Variasi Susun Huruf (Letter Scramble / Spelling) */
+.letter-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 50px;
+    background: #ffffff;
+    border: 2px solid #7c3aed;
+    color: #6d28d9;
+    font-weight: 800;
+    font-size: 1.3rem;
+    border-radius: 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease;
+    box-shadow: 0 2px 4px rgba(124, 58, 237, 0.12);
+}
+
+.letter-chip:hover {
+    background: #ede9fe;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(124, 58, 237, 0.25);
+}
+
+.letter-chip-target {
+    background: #7c3aed;
+    color: #ffffff;
+    border: 2px solid #6d28d9;
+}
+
+.letter-chip-target:hover {
+    background: #ef4444;
+    border-color: #dc2626;
+    color: #ffffff;
+}
+
+.letter-target-box {
+    background-color: #f8fafc;
+    border: 2px dashed #a78bfa;
+    border-radius: 14px;
+    min-height: 75px;
+    padding: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.letter-target-box.active {
+    border-color: #7c3aed;
+    background-color: #f5f3ff;
+}
+
+/* Styling Khusus Benar / Salah (True/False Cards) */
+.tf-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tf-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.tf-card-true:hover {
+    border-color: #10b981;
+    background-color: #f0fdf4;
+}
+
+.tf-card-false:hover {
+    border-color: #ef4444;
+    background-color: #fef2f2;
+}
+
+.tf-card-true.selected {
+    border-color: #10b981 !important;
+    background-color: #ecfdf5 !important;
+    color: #065f46 !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
+}
+
+.tf-card-false.selected {
+    border-color: #ef4444 !important;
+    background-color: #fff1f2 !important;
+    color: #9f1239 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+}
 </style>
 
 <!-- Area Konten Utama Siswa -->
@@ -455,12 +554,17 @@ require_once '../includes/sidebar.php';
 
             // Badge Tipe Soal
             const typeBadge = document.getElementById("type-badge-indicator");
+            typeBadge.removeAttribute("style");
             if (qType === 'isian') {
                 typeBadge.className = "badge bg-warning-subtle text-warning-emphasis fw-bold py-1 px-3 rounded-pill";
                 typeBadge.innerHTML = '<i class="bi bi-pencil-square me-1"></i>ISIAN SINGKAT / ESSAY';
             } else if (qType === 'susun_kata') {
                 typeBadge.className = "badge bg-success-subtle text-success-emphasis fw-bold py-1 px-3 rounded-pill";
                 typeBadge.innerHTML = '<i class="bi bi-puzzle me-1"></i>SUSUN KATA (WORD ARRANGE)';
+            } else if (qType === 'susun_huruf') {
+                typeBadge.className = "badge text-white fw-bold py-1 px-3 rounded-pill";
+                typeBadge.style.backgroundColor = "#7c3aed";
+                typeBadge.innerHTML = '<i class="bi bi-spellcheck me-1"></i>SUSUN HURUF (SPELLING PUZZLE)';
             } else if (qType === 'true_false') {
                 typeBadge.className = "badge bg-info-subtle text-info-emphasis fw-bold py-1 px-3 rounded-pill";
                 typeBadge.innerHTML = '<i class="bi bi-check2-circle me-1"></i>BENAR / SALAH (TRUE / FALSE)';
@@ -475,21 +579,15 @@ require_once '../includes/sidebar.php';
 
             const currentAnswer = answers[currentIndex];
 
-            if (qType === 'pilihan_ganda' || qType === 'true_false') {
-                let opts = [];
-                if (qType === 'true_false') {
-                    opts = [
-                        { key: 'A', text: currentQuestion.opsi_a || 'TRUE (Benar)' },
-                        { key: 'B', text: currentQuestion.opsi_b || 'FALSE (Salah)' }
-                    ];
-                } else {
-                    opts = [
-                        { key: 'A', text: currentQuestion.opsi_a },
-                        { key: 'B', text: currentQuestion.opsi_b },
-                        { key: 'C', text: currentQuestion.opsi_c },
-                        { key: 'D', text: currentQuestion.opsi_d }
-                    ].filter(o => o.text !== null && o.text !== undefined && o.text !== '');
-                }
+            if (qType === 'true_false') {
+                renderTrueFalse(currentQuestion, optionsContainer);
+            } else if (qType === 'pilihan_ganda') {
+                const opts = [
+                    { key: 'A', text: currentQuestion.opsi_a },
+                    { key: 'B', text: currentQuestion.opsi_b },
+                    { key: 'C', text: currentQuestion.opsi_c },
+                    { key: 'D', text: currentQuestion.opsi_d }
+                ].filter(o => o.text !== null && o.text !== undefined && o.text !== '');
 
                 opts.forEach(function(opt) {
                     const card = document.createElement("div");
@@ -516,6 +614,10 @@ require_once '../includes/sidebar.php';
 
                     optionsContainer.appendChild(card);
                 });
+            } else if (qType === 'susun_huruf') {
+                renderSusunHuruf(currentQuestion, optionsContainer);
+            } else if (qType === 'susun_kata') {
+                renderSusunKata(currentQuestion, optionsContainer);
             } else if (qType === 'isian') {
                 const isianWrapper = document.createElement("div");
                 isianWrapper.className = "p-3 p-md-4 bg-light rounded-4 border";
@@ -562,8 +664,6 @@ require_once '../includes/sidebar.php';
                     localStorage.setItem(storageKeyAnswers, JSON.stringify(answers));
                     updatePalette();
                 });
-            } else if (qType === 'susun_kata') {
-                renderSusunKata(currentQuestion, optionsContainer);
             }
 
             // Atur Navigasi Tombol
@@ -586,7 +686,195 @@ require_once '../includes/sidebar.php';
             updatePalette();
         }
 
-        // 7. Render Interaktif Susun Kata
+        // 7. Render Interaktif Benar / Salah (True/False)
+        function renderTrueFalse(currentQuestion, container) {
+            const currentAnswer = answers[currentIndex];
+            const optA = currentQuestion.opsi_a || 'Pernyataan ini Benar';
+            const optB = currentQuestion.opsi_b || 'Pernyataan ini Salah';
+
+            const tfWrapper = document.createElement("div");
+            tfWrapper.className = "row g-3 py-2";
+
+            // True Card (Hijau)
+            const colTrue = document.createElement("div");
+            colTrue.className = "col-12 col-md-6";
+            colTrue.innerHTML = `
+                <div class="tf-card tf-card-true ${currentAnswer === 'A' ? 'selected' : ''}" id="opt-A">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center shadow-xs" style="width: 48px; height: 48px; flex-shrink: 0;">
+                            <i class="bi bi-check-lg fs-3"></i>
+                        </div>
+                        <div>
+                            <div class="h5 fw-bold mb-0 text-success">TRUE (Benar)</div>
+                            <small class="text-secondary">${optA}</small>
+                        </div>
+                    </div>
+                    <div class="opt-check">
+                        ${currentAnswer === 'A' ? '<i class="bi bi-check-circle-fill text-success fs-3"></i>' : '<i class="bi bi-circle text-muted fs-3 opacity-50"></i>'}
+                    </div>
+                </div>
+            `;
+            colTrue.querySelector(".tf-card").onclick = function() {
+                selectOption('A');
+            };
+
+            // False Card (Merah)
+            const colFalse = document.createElement("div");
+            colFalse.className = "col-12 col-md-6";
+            colFalse.innerHTML = `
+                <div class="tf-card tf-card-false ${currentAnswer === 'B' ? 'selected' : ''}" id="opt-B">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center shadow-xs" style="width: 48px; height: 48px; flex-shrink: 0;">
+                            <i class="bi bi-x-lg fs-3"></i>
+                        </div>
+                        <div>
+                            <div class="h5 fw-bold mb-0 text-danger">FALSE (Salah)</div>
+                            <small class="text-secondary">${optB}</small>
+                        </div>
+                    </div>
+                    <div class="opt-check">
+                        ${currentAnswer === 'B' ? '<i class="bi bi-x-circle-fill text-danger fs-3"></i>' : '<i class="bi bi-circle text-muted fs-3 opacity-50"></i>'}
+                    </div>
+                </div>
+            `;
+            colFalse.querySelector(".tf-card").onclick = function() {
+                selectOption('B');
+            };
+
+            tfWrapper.appendChild(colTrue);
+            tfWrapper.appendChild(colFalse);
+            container.appendChild(tfWrapper);
+        }
+
+        // State untuk susun huruf per soal
+        window.susunHurufState = window.susunHurufState || {};
+
+        // 8. Render Interaktif Susun Huruf (Letter Scramble / Spelling)
+        function renderSusunHuruf(currentQuestion, container) {
+            // Ambil huruf dari opsi_a
+            let rawLetters = [];
+            if (currentQuestion.opsi_a) {
+                if (currentQuestion.opsi_a.includes('/')) {
+                    rawLetters = currentQuestion.opsi_a.split('/').map(s => s.trim().toUpperCase()).filter(s => s.length > 0);
+                } else if (currentQuestion.opsi_a.includes('-')) {
+                    rawLetters = currentQuestion.opsi_a.split('-').map(s => s.trim().toUpperCase()).filter(s => s.length > 0);
+                } else if (currentQuestion.opsi_a.includes(' ')) {
+                    rawLetters = currentQuestion.opsi_a.split(/\s+/).map(s => s.trim().toUpperCase()).filter(s => s.length > 0);
+                } else {
+                    rawLetters = currentQuestion.opsi_a.trim().toUpperCase().split('');
+                }
+            }
+
+            const allTokens = rawLetters.map((char, idx) => ({ id: idx, text: char }));
+
+            // Tentukan huruf yang sudah terpilih
+            if (!window.susunHurufState[currentIndex]) {
+                const savedWord = answers[currentIndex];
+                if (savedWord) {
+                    const savedChars = savedWord.split('');
+                    const chosen = [];
+                    const remaining = [...allTokens];
+                    savedChars.forEach(c => {
+                        const matchIdx = remaining.findIndex(t => t.text.toLowerCase() === c.toLowerCase());
+                        if (matchIdx !== -1) {
+                            chosen.push(remaining[matchIdx]);
+                            remaining.splice(matchIdx, 1);
+                        }
+                    });
+                    window.susunHurufState[currentIndex] = chosen;
+                } else {
+                    window.susunHurufState[currentIndex] = [];
+                }
+            }
+
+            const chosenTokens = window.susunHurufState[currentIndex];
+            const chosenIds = chosenTokens.map(t => t.id);
+            const availableTokens = allTokens.filter(t => !chosenIds.includes(t.id));
+
+            const wrapper = document.createElement("div");
+            wrapper.className = "p-3 p-md-4 rounded-4 border";
+            wrapper.style.backgroundColor = "#faf5ff";
+
+            wrapper.innerHTML = `
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-bold text-dark mb-0">
+                            <i class="bi bi-spellcheck me-1" style="color: #7c3aed;"></i>Kotak Ejaan Kata Anda:
+                        </label>
+                        <button type="button" id="btn-reset-huruf" class="btn btn-sm btn-outline-danger py-1 px-3 rounded-pill fw-semibold">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Huruf
+                        </button>
+                    </div>
+                    <div id="letter-target-box" class="letter-target-box ${chosenTokens.length > 0 ? 'active' : ''}">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label fw-bold text-secondary small mb-2">
+                        <i class="bi bi-hand-index-thumb me-1" style="color: #7c3aed;"></i>Ubin Huruf Tersedia (Klik untuk menyusun kata):
+                    </label>
+                    <div id="letters-pool-box" class="d-flex flex-wrap gap-2 p-3 bg-white rounded-3 border justify-content-center">
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(wrapper);
+
+            const targetBox = document.getElementById("letter-target-box");
+            const poolBox = document.getElementById("letters-pool-box");
+
+            if (chosenTokens.length === 0) {
+                targetBox.innerHTML = '<span class="text-muted small fst-italic w-100 text-center py-2"><i class="bi bi-arrow-down-circle me-1"></i>Klik ubin huruf di bawah ini untuk mengeja kata bahasa Inggris...</span>';
+            } else {
+                chosenTokens.forEach((token, index) => {
+                    const chip = document.createElement("span");
+                    chip.className = "letter-chip letter-chip-target";
+                    chip.title = "Klik untuk membatalkan huruf ini";
+                    chip.innerText = token.text;
+                    chip.onclick = function() {
+                        chosenTokens.splice(index, 1);
+                        syncSusunHurufAnswer(chosenTokens);
+                        displayQuestion();
+                    };
+                    targetBox.appendChild(chip);
+                });
+            }
+
+            if (availableTokens.length === 0) {
+                poolBox.innerHTML = '<span class="text-success small fw-semibold w-100 text-center py-2"><i class="bi bi-check2-all me-1"></i>Semua huruf telah tersusun ke dalam kotak ejaan!</span>';
+            } else {
+                availableTokens.forEach(token => {
+                    const chip = document.createElement("span");
+                    chip.className = "letter-chip";
+                    chip.title = "Klik untuk memasukkan huruf ini";
+                    chip.innerText = token.text;
+                    chip.onclick = function() {
+                        chosenTokens.push(token);
+                        syncSusunHurufAnswer(chosenTokens);
+                        displayQuestion();
+                    };
+                    poolBox.appendChild(chip);
+                });
+            }
+
+            document.getElementById("btn-reset-huruf").onclick = function() {
+                window.susunHurufState[currentIndex] = [];
+                syncSusunHurufAnswer([]);
+                displayQuestion();
+            };
+        }
+
+        function syncSusunHurufAnswer(chosenTokens) {
+            if (chosenTokens.length > 0) {
+                answers[currentIndex] = chosenTokens.map(t => t.text).join('');
+            } else {
+                delete answers[currentIndex];
+            }
+            localStorage.setItem(storageKeyAnswers, JSON.stringify(answers));
+            updatePalette();
+        }
+
+        // 9. Render Interaktif Susun Kata
         function renderSusunKata(currentQuestion, container) {
             // Ambil token dari opsi_a
             let rawTokens = [];
@@ -710,12 +998,12 @@ require_once '../includes/sidebar.php';
             updatePalette();
         }
 
-        // 8. Pilih Jawaban Pilihan Ganda / True-False
+        // 10. Pilih Jawaban Pilihan Ganda / True-False
         function selectOption(selectedKey) {
             answers[currentIndex] = selectedKey;
             localStorage.setItem(storageKeyAnswers, JSON.stringify(answers));
 
-            // Perbarui gaya opsi terpilih
+            // Perbarui gaya opsi terpilih (Pilihan Ganda)
             const options = document.querySelectorAll(".opt-card");
             options.forEach(function(el) {
                 el.classList.remove("selected");
@@ -725,12 +1013,28 @@ require_once '../includes/sidebar.php';
                 }
             });
 
+            // Perbarui gaya kartu True/False
+            const tfCards = document.querySelectorAll(".tf-card");
+            tfCards.forEach(function(el) {
+                el.classList.remove("selected");
+                const checkIcon = el.querySelector(".opt-check");
+                if (checkIcon) {
+                    checkIcon.innerHTML = '<i class="bi bi-circle text-muted fs-3 opacity-50"></i>';
+                }
+            });
+
             const selectedCard = document.getElementById(`opt-${selectedKey}`);
             if (selectedCard) {
                 selectedCard.classList.add("selected");
                 const checkIcon = selectedCard.querySelector(".opt-check");
                 if (checkIcon) {
-                    checkIcon.innerHTML = '<i class="bi bi-check-circle-fill text-primary fs-5"></i>';
+                    if (selectedCard.classList.contains("tf-card-true")) {
+                        checkIcon.innerHTML = '<i class="bi bi-check-circle-fill text-success fs-3"></i>';
+                    } else if (selectedCard.classList.contains("tf-card-false")) {
+                        checkIcon.innerHTML = '<i class="bi bi-x-circle-fill text-danger fs-3"></i>';
+                    } else {
+                        checkIcon.innerHTML = '<i class="bi bi-check-circle-fill text-primary fs-5"></i>';
+                    }
                 }
             }
 

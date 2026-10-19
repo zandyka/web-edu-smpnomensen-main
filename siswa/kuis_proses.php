@@ -45,7 +45,18 @@ try {
         $tipe = $soal['tipe_soal'] ?? 'pilihan_ganda';
 
         $is_correct = false;
-        if ($tipe === 'isian' || $tipe === 'susun_kata') {
+        if ($tipe === 'susun_huruf') {
+            // Hilangkan spasi dan simbol, bandingkan murni susunan huruf
+            $clean_student = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', $selected)));
+            $accepted_list = explode('|', $correct);
+            foreach ($accepted_list as $acc) {
+                $clean_acc = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', trim($acc))));
+                if ($clean_student === $clean_acc && $clean_student !== '') {
+                    $is_correct = true;
+                    break;
+                }
+            }
+        } elseif ($tipe === 'isian' || $tipe === 'susun_kata') {
             // Normalisasi: kecilkan huruf, hilangkan tanda baca dan spasi ganda
             $clean_student = strtolower(trim(preg_replace('/[.,?!;:"\']/', '', preg_replace('/\s+/', ' ', $selected))));
             $accepted_list = explode('|', $correct);
